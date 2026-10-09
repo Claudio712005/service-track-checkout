@@ -25,12 +25,14 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-data-jpa")
     implementation("org.springframework.boot:spring-boot-starter-kafka")
     implementation("org.springframework.boot:spring-boot-starter-opentelemetry")
+    implementation("org.springframework.boot:spring-boot-starter-restclient")
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.0")
     implementation("tools.jackson.module:jackson-module-kotlin")
+    implementation("com.mercadopago:sdk-java:2.1.21")
     runtimeOnly("org.postgresql:postgresql")
     runtimeOnly("io.micrometer:micrometer-registry-prometheus")
     testImplementation("org.springframework.boot:spring-boot-starter-data-jpa-test")
@@ -58,7 +60,7 @@ tasks.withType<Test> {
     useJUnitPlatform()
 }
 
-val SEM_LOGICA = listOf("**/Application*")
+val SEM_LOGICA = listOf("**/Application*", "**/dto/**")
 
 jacoco {
     toolVersion = "0.8.13"
