@@ -4,6 +4,7 @@ import com.clau.service_track.checkout.application.exception.RecursoNaoEncontrad
 import com.clau.service_track.checkout.application.port.out.CobrancaRepositoryPort
 import com.clau.service_track.checkout.application.port.out.DadosDoCartao
 import com.clau.service_track.checkout.application.port.out.DadosDoPagador
+import com.clau.service_track.checkout.application.port.out.OrdensPort
 import com.clau.service_track.checkout.application.port.out.PagamentoGatewayPort
 import com.clau.service_track.checkout.application.port.out.RegistroDeNotificacaoPort
 import com.clau.service_track.checkout.application.port.out.RespostaDoProvedor
@@ -23,6 +24,7 @@ class CobrancaCommandHandler(
     private val cobrancas: CobrancaRepositoryPort,
     private val gateway: PagamentoGatewayPort,
     private val notificacoes: RegistroDeNotificacaoPort,
+    private val ordens: OrdensPort,
 ) {
 
     private val log = LoggerFactory.getLogger(CobrancaCommandHandler::class.java)
@@ -38,6 +40,12 @@ class CobrancaCommandHandler(
         if (meio == MeioDePagamento.CARTAO && cartao == null) {
             throw DomainException("Pagamento com cartão exige token, bandeira e parcelas")
         }
+
+        val orcamento = ordens.orcamentoAprovadoDe(ordemServicoId)
+            ?: throw RecursoNaoEncontradoException(
+                "Ordem de serviço $ordemServicoId não existe ou não tem orçamento aprovado"
+            )
+        orcamento.exigirValorCobravel(ValorMonetario(valor))
 
         cobrancas.porOrdemEMeio(ordemServicoId, meio)?.let { existente ->
             if (!existente.situacao.encerrada || existente.situacao == SituacaoDaCobranca.APROVADA) {
