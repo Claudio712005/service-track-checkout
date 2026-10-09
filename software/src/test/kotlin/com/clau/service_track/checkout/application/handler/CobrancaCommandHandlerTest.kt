@@ -4,11 +4,14 @@ import com.clau.service_track.checkout.application.exception.RecursoNaoEncontrad
 import com.clau.service_track.checkout.application.port.out.CobrancaRepositoryPort
 import com.clau.service_track.checkout.application.port.out.DadosDoCartao
 import com.clau.service_track.checkout.application.port.out.DadosDoPagador
+import com.clau.service_track.checkout.application.port.out.OrdensPort
 import com.clau.service_track.checkout.application.port.out.PagamentoGatewayPort
 import com.clau.service_track.checkout.application.port.out.RegistroDeNotificacaoPort
 import com.clau.service_track.checkout.application.port.out.RespostaDoProvedor
 import com.clau.service_track.checkout.domain.DomainException
 import com.clau.service_track.checkout.domain.cobranca.Cobranca
+import com.clau.service_track.checkout.domain.orcamento.OrcamentoAprovado
+import com.clau.service_track.checkout.domain.vo.ValorMonetario
 import com.clau.service_track.checkout.domain.cobranca.MeioDePagamento
 import com.clau.service_track.checkout.domain.cobranca.SituacaoDaCobranca
 import com.clau.service_track.checkout.domain.vo.CobrancaId
@@ -87,7 +90,17 @@ class CobrancaCommandHandlerTest {
         }
     }
 
-    private val handler = CobrancaCommandHandler(repositorio, gateway, registro)
+    private var orcamentoAprovado: OrcamentoAprovado? = OrcamentoAprovado(
+        ordemServicoId = ordem,
+        orcamentoId = "orc-1",
+        total = ValorMonetario(BigDecimal("267.70")),
+    )
+
+    private val servicoDeOrdens = object : OrdensPort {
+        override fun orcamentoAprovadoDe(ordemServicoId: String): OrcamentoAprovado? = orcamentoAprovado
+    }
+
+    private val handler = CobrancaCommandHandler(repositorio, gateway, registro, servicoDeOrdens)
 
     @BeforeTest
     fun preparar() {
@@ -95,6 +108,7 @@ class CobrancaCommandHandlerTest {
         notificadas.clear()
         chamadasAoProvedor.set(0)
         chavesDeIdempotencia.clear()
+        orcamentoAprovado = OrcamentoAprovado(ordem, "orc-1", ValorMonetario(BigDecimal("267.70")))
         respostaDaCriacao = aprovado(1001)
         respostaDaConsulta = aprovado(1001)
     }
@@ -167,6 +181,20 @@ class CobrancaCommandHandlerTest {
         assertEquals(SituacaoDaCobranca.RECUSADA, primeira.cobranca.situacao)
         assertEquals(SituacaoDaCobranca.APROVADA, segunda.cobranca.situacao)
         assertEquals(2, chamadasAoProvedor.get())
+    }
+
+    @Test
+    fun `valor diferente do orcamento aprovado e recusado`() {
+        assertFailsWith<DomainException> { solicitar(valor = "1.00") }
+        assertEquals(0, chamadasAoProvedor.get(), "nao se cobra valor que ninguem aprovou")
+    }
+
+    @Test
+    fun `ordem sem orcamento aprovado nao gera cobranca`() {
+        orcamentoAprovado = null
+
+        assertFailsWith<RecursoNaoEncontradoException> { solicitar() }
+        assertEquals(0, chamadasAoProvedor.get())
     }
 
     @Test

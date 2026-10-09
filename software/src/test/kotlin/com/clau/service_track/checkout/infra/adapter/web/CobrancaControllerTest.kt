@@ -7,10 +7,13 @@ import com.clau.service_track.checkout.application.handler.ResultadoDaCobranca
 import com.clau.service_track.checkout.application.port.out.CobrancaRepositoryPort
 import com.clau.service_track.checkout.application.port.out.DadosDoCartao
 import com.clau.service_track.checkout.application.port.out.DadosDoPagador
+import com.clau.service_track.checkout.application.port.out.OrdensPort
 import com.clau.service_track.checkout.application.port.out.PagamentoGatewayPort
 import com.clau.service_track.checkout.application.port.out.RegistroDeNotificacaoPort
 import com.clau.service_track.checkout.application.port.out.RespostaDoProvedor
 import com.clau.service_track.checkout.domain.cobranca.Cobranca
+import com.clau.service_track.checkout.domain.orcamento.OrcamentoAprovado
+import com.clau.service_track.checkout.domain.vo.ValorMonetario
 import com.clau.service_track.checkout.domain.cobranca.MeioDePagamento
 import com.clau.service_track.checkout.domain.cobranca.SituacaoDaCobranca
 import com.clau.service_track.checkout.domain.vo.CobrancaId
@@ -64,6 +67,14 @@ class CobrancaControllerTest {
         override fun registrar(chave: String, tipo: String, acao: String?, recursoId: String) = Unit
     }
 
+    private val servicoDeOrdens = object : OrdensPort {
+        override fun orcamentoAprovadoDe(ordemServicoId: String) = OrcamentoAprovado(
+            ordemServicoId = ordemServicoId,
+            orcamentoId = "orc-1",
+            total = ValorMonetario(java.math.BigDecimal("267.70")),
+        )
+    }
+
     private lateinit var mockMvc: MockMvc
 
     @BeforeTest
@@ -73,7 +84,7 @@ class CobrancaControllerTest {
         resposta = RespostaDoProvedor(1001, SituacaoDaCobranca.PENDENTE, "pending", qrCode = "000201")
 
         val controller = CobrancaController(
-            escrita = CobrancaCommandHandler(repositorio, gateway, registro),
+            escrita = CobrancaCommandHandler(repositorio, gateway, registro, servicoDeOrdens),
             leitura = CobrancaQueryHandler(repositorio),
             mapper = CobrancaMapperWeb(),
         )
