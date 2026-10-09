@@ -48,6 +48,10 @@ clients:
       url: ${URL_CANCELAR_PAGAMENTO:https://api.mercadopago.com/v1/payments}
       timeout: ${TIMEOUT_CANCELAR_PAGAMENTO:15000}
       retry: ${RETRY_CANCELAR_PAGAMENTO:2}
+    CONSULTAR_ORDEM_SERVICO:
+      url: ${URL_CONSULTAR_ORDEM_SERVICO:http://localhost:8082/ordens}
+      timeout: ${TIMEOUT_CONSULTAR_ORDEM_SERVICO:5000}
+      retry: ${RETRY_CONSULTAR_ORDEM_SERVICO:2}
     ESTORNAR_PAGAMENTO:
       url: ${URL_ESTORNAR_PAGAMENTO:https://api.mercadopago.com/v1/payments}
       timeout: ${TIMEOUT_ESTORNAR_PAGAMENTO:15000}

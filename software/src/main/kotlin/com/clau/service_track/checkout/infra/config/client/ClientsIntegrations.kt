@@ -7,4 +7,5 @@ enum class ClientsIntegrations {
     CONSULTAR_PAGAMENTO,
     CANCELAR_PAGAMENTO,
     ESTORNAR_PAGAMENTO,
+    CONSULTAR_ORDEM_SERVICO,
 }
