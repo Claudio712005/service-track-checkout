@@ -14,6 +14,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.client.ResourceAccessException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -68,6 +69,17 @@ class GlobalExceptionHandler {
             HttpStatus.SERVICE_UNAVAILABLE,
             "PROVEDOR_INDISPONIVEL",
             "Provedor de pagamento indisponivel, tente novamente em instantes",
+            requisicao,
+        )
+    }
+
+    @ExceptionHandler(ResourceAccessException::class)
+    fun dependenciaInalcancavel(erro: ResourceAccessException, requisicao: HttpServletRequest): ResponseEntity<ErroResponse> {
+        log.error("dependencia inalcancavel rota={} causa={}", requisicao.requestURI, erro.message)
+        return montar(
+            HttpStatus.BAD_GATEWAY,
+            "DEPENDENCIA_INDISPONIVEL",
+            "Dependencia necessaria para a cobranca esta inalcancavel",
             requisicao,
         )
     }
