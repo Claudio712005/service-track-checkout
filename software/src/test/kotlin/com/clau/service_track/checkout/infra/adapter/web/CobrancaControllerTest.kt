@@ -31,6 +31,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.test.web.servlet.setup.MockMvcBuilders
+import org.springframework.web.client.ResourceAccessException
 
 class CobrancaControllerTest {
 
@@ -67,12 +68,19 @@ class CobrancaControllerTest {
         override fun registrar(chave: String, tipo: String, acao: String?, recursoId: String) = Unit
     }
 
+    private var ordensInalcancavel = false
+
     private val servicoDeOrdens = object : OrdensPort {
-        override fun orcamentoAprovadoDe(ordemServicoId: String) = OrcamentoAprovado(
-            ordemServicoId = ordemServicoId,
-            orcamentoId = "orc-1",
-            total = ValorMonetario(java.math.BigDecimal("267.70")),
-        )
+        override fun orcamentoAprovadoDe(ordemServicoId: String): OrcamentoAprovado {
+            if (ordensInalcancavel) {
+                throw ResourceAccessException("Connection refused")
+            }
+            return OrcamentoAprovado(
+                ordemServicoId = ordemServicoId,
+                orcamentoId = "orc-1",
+                total = ValorMonetario(java.math.BigDecimal("267.70")),
+            )
+        }
     }
 
     private lateinit var mockMvc: MockMvc
@@ -81,6 +89,7 @@ class CobrancaControllerTest {
     fun preparar() {
         guardadas.clear()
         falharNoProvedor = false
+        ordensInalcancavel = false
         resposta = RespostaDoProvedor(1001, SituacaoDaCobranca.PENDENTE, "pending", qrCode = "000201")
 
         val controller = CobrancaController(
@@ -206,5 +215,14 @@ class CobrancaControllerTest {
         mockMvc.perform(post("/cobrancas/$id/reconciliacao"))
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.situacao").value("APROVADA"))
+    }
+
+    @Test
+    fun `servico de ordens inalcancavel responde 502, nao 500`() {
+        ordensInalcancavel = true
+
+        mockMvc.perform(post("/cobrancas").contentType(MediaType.APPLICATION_JSON).content(corpo()))
+            .andExpect(status().isBadGateway)
+            .andExpect(jsonPath("$.code").value("DEPENDENCIA_INDISPONIVEL"))
     }
 }
