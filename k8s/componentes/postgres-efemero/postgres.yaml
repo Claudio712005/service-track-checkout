@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-track-checkout-postgres
+  labels:
+    app: service-track-checkout-postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: service-track-checkout-postgres
+  template:
+    metadata:
+      labels:
+        app: service-track-checkout-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: st_chk
+            - name: POSTGRES_USER
+              value: st_chk_user
+            - name: POSTGRES_PASSWORD
+              value: st_chk_local
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "st_chk_user", "-d", "st_chk"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          volumeMounts:
+            - name: dados
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: dados
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-track-checkout-postgres
+  labels:
+    app: service-track-checkout-postgres
+spec:
+  type: ClusterIP
+  selector:
+    app: service-track-checkout-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: service-track-checkout
+  labels:
+    app: service-track-checkout
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  progressDeadlineSeconds: 300
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: service-track-checkout
+  template:
+    metadata:
+      labels:
+        app: service-track-checkout
+    spec:
+      containers:
+        - name: service-track-checkout
+          image: servicetrack-checkout:latest
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: service-track-checkout-config
+            - secretRef:
+                name: service-track-checkout-db
+                optional: true
+            - secretRef:
+                name: service-track-checkout-mercado-pago
+                optional: true
+          startupProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 100m
+              memory: 448Mi
+            limits:
+              memory: 640Mi
