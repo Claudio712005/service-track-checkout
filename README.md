@@ -186,6 +186,47 @@ Schema `CHECKOUT` no `st_chk`, em [`db/postgres/01_baseline_st_chk.sql`](db/post
 provedor, não o nosso, e sem o índice a busca varreria a tabela — além de permitir dois registros
 apontando para o mesmo pagamento.
 
+## Como este serviço sobe
+
+| Ambiente | Banco | Imagem | Exposição |
+|---|---|---|---|
+| `local` (kind) | `componentes/postgres-efemero` | `servicetrack-checkout:local` | NodePort 30084 |
+| `hml` e `prd` | RDS próprio, criado por `infra/terraform` | ECR do ambiente | API Gateway privada → VPC Link → NLB interno → NodePort 30084 |
+
+A porta 30084 é contrato com `apis/service-track-api-int/servicos-<ENV>.yaml` no
+`service-track-aws-iac` (`IAC-ADR-033`) e **nada valida o par**: mudar aqui sem mudar lá dá alvo
+`unhealthy` no NLB e `503` na rota, sem erro de apply.
+
+### Dois segredos, separados de propósito
+
+| Segredo | Vem de | Sem ele |
+|---|---|---|
+| `service-track-checkout-db` | `/servicetrack/<env>/checkout/db/*` no SSM | a aplicação não sobe |
+| `service-track-checkout-mercado-pago` | `/servicetrack/<env>/checkout/mercado-pago/*` no SSM | sobe, mas a cobrança falha no provedor e o webhook recusa toda notificação |
+
+Os dois entram como `secretRef` **opcional** no Deployment e são criados pela esteira **Banco**,
+a partir do SSM. O token do provedor não passa por variável do Terraform, que o gravaria no
+state (`I-16`).
+
+### O que o smoke da esteira prova
+
+A imagem sobe contra o baseline do Postgres e são conferidas quatro respostas que **não**
+dependem do provedor nem do serviço de ordens:
+
+| Requisição | Esperado |
+|---|---|
+| `GET /cobrancas/{uuid}` inexistente | 404 |
+| `POST /cobrancas` com cartão sem token | 422, sem chamar o provedor |
+| `POST /webhooks/mercado-pago` sem assinatura | 401 |
+| `GET /actuator/prometheus` | 200 |
+
+Os quatro foram medidos localmente antes de entrarem na esteira.
+
+### Dependência de saída
+
+`URL_CONSULTAR_ORDEM_SERVICO` aponta para o serviço de ordens pelo DNS do cluster. **Ordens
+inacessível responde 502**, não 500: a falha é da dependência, não deste serviço.
+
 ## Cobertura
 
 Portão em linha 80%, instrução 80%, ramo 60%. Medido em 09/10/2026, com 78 testes:
