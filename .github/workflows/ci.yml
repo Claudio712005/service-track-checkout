@@ -1,0 +1,267 @@
+name: CI
+
+run-name: "CI de ${{ github.ref_name }} por @${{ github.actor }}"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: "25"
+  DIRETORIO: software
+
+jobs:
+
+  guarda-de-segredos:
+    name: "1. Guarda de segredos"
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Nenhuma chave privada rastreada
+        run: |
+          RASTREADOS="$(git ls-files | grep -iE '\.(pem|key|p12|jks)$' || true)"
+          if [ -n "$RASTREADOS" ]; then
+            echo "::error::Material sensivel versionado:"
+            echo "$RASTREADOS"
+            exit 1
+          fi
+          echo "Nenhum arquivo de chave rastreado."
+
+      - name: Nenhum PEM versionado contem bloco privado
+        run: |
+          for arquivo in $(git ls-files '*.pem'); do
+            if grep -q "PRIVATE KEY" "$arquivo"; then
+              echo "::error::$arquivo contem uma chave privada"
+              exit 1
+            fi
+          done
+          echo "Nenhum PEM versionado carrega chave privada."
+
+      - name: Apenas as entradas previstas na raiz
+        run: |
+          PREVISTAS=".env.exemplo .github .gitattributes .gitignore README.md db docker-compose.yml docs infra k8s observabilidade scripts software"
+          INESPERADAS=""
+          for entrada in $(git ls-files | cut -d/ -f1 | sort -u); do
+            case " $PREVISTAS " in
+              *" $entrada "*) ;;
+              *) INESPERADAS="$INESPERADAS $entrada" ;;
+            esac
+          done
+          if [ -n "$INESPERADAS" ]; then
+            echo "::error::Entrada nao prevista na raiz do repositorio:$INESPERADAS"
+            echo "Se for intencional, inclua na lista PREVISTAS desta etapa."
+            exit 1
+          fi
+          echo "Raiz do repositorio com as entradas previstas."
+
+  construir:
+    name: "2. Build e testes"
+    needs: guarda-de-segredos
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: ${{ env.DIRETORIO }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Compilar e testar
+        run: ./gradlew --no-daemon build
+
+      - name: Publicar relatorio de testes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-de-teste
+          path: ${{ env.DIRETORIO }}/build/test-results/test/
+          retention-days: 7
+
+      - name: Publicar artefato de build
+        uses: actions/upload-artifact@v4
+        with:
+          name: aplicacao-jar
+          path: ${{ env.DIRETORIO }}/build/libs/*-SNAPSHOT.jar
+          retention-days: 7
+
+      - name: Resumo
+        if: always()
+        run: |
+          TOTAL=$(grep -ho 'tests="[0-9]*"' build/test-results/test/*.xml 2>/dev/null \
+            | grep -oE '[0-9]+' | awk '{s+=$1} END {print s+0}')
+          FALHAS=$(grep -ho 'failures="[0-9]*"' build/test-results/test/*.xml 2>/dev/null \
+            | grep -oE '[0-9]+' | awk '{s+=$1} END {print s+0}')
+          {
+            echo "### Build de \`${{ github.ref_name }}\`"
+            echo ""
+            echo "| Metrica | Valor |"
+            echo "|---|---|"
+            echo "| Testes executados | $TOTAL |"
+            echo "| Falhas | $FALHAS |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  imagem:
+    name: "3. Imagem de container"
+    needs: construir
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Construir a imagem sem publicar
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ env.DIRETORIO }}
+          push: false
+          load: true
+          tags: servicetrack-checkout:${{ github.sha }}
+          provenance: false
+          sbom: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Conferir que a imagem sobe contra o baseline e responde a API
+        run: |
+          docker network create checkout-ci
+          docker run -d --name postgres --network checkout-ci \
+            -e POSTGRES_DB=st_chk \
+            -e POSTGRES_USER=st_chk_user \
+            -e POSTGRES_PASSWORD=st_chk_ci \
+            postgres:16
+
+          limpar() {
+            docker rm -f checkout postgres >/dev/null 2>&1 || true
+            docker network rm checkout-ci >/dev/null 2>&1 || true
+          }
+
+          for tentativa in $(seq 1 30); do
+            docker exec postgres pg_isready -U st_chk_user -d st_chk >/dev/null 2>&1 && break
+            sleep 2
+          done
+
+          docker cp db/postgres/01_baseline_st_chk.sql postgres:/tmp/baseline.sql
+          if ! docker exec postgres psql -v ON_ERROR_STOP=1 -U st_chk_user -d st_chk -f /tmp/baseline.sql; then
+            echo "::error::O baseline do Postgres falhou. Sem Flyway, nada mais aplica o schema."
+            limpar
+            exit 1
+          fi
+
+          docker run -d --name checkout --network checkout-ci \
+            -e ST_CHK_DB_URL=jdbc:postgresql://postgres:5432/st_chk \
+            -e ST_CHK_DB_USER=st_chk_user \
+            -e ST_CHK_DB_PASSWORD=st_chk_ci \
+            -p 8080:8080 \
+            servicetrack-checkout:${{ github.sha }}
+
+          SUBIU=nao
+          for tentativa in $(seq 1 30); do
+            CODIGO="$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/actuator/health || echo 000)"
+            if [ "$CODIGO" = "200" ]; then
+              echo "Aplicacao respondeu UP em ${tentativa}0s."
+              SUBIU=sim
+              break
+            fi
+            sleep 10
+          done
+
+          if [ "$SUBIU" != "sim" ]; then
+            echo "::error::A aplicacao nao respondeu UP em /actuator/health apos 5 minutos."
+            curl -s http://localhost:8080/actuator/health || true
+            docker logs checkout | tail -n 100
+            limpar
+            exit 1
+          fi
+
+          conferir() {
+            local descricao="$1" esperado="$2" obtido="$3"
+            if [ "$obtido" != "$esperado" ]; then
+              echo "::error::$descricao: esperado $esperado, obtido $obtido"
+              docker logs checkout | tail -n 60
+              limpar
+              exit 1
+            fi
+            echo "$descricao: $obtido"
+          }
+
+          COBRANCA="$(cat /proc/sys/kernel/random/uuid)"
+          ORDEM="$(cat /proc/sys/kernel/random/uuid)"
+
+          CODIGO="$(curl -s -o /dev/null -w '%{http_code}' \
+            "http://localhost:8080/cobrancas/$COBRANCA")"
+          conferir "Cobranca inexistente responde 404" 404 "$CODIGO"
+
+          CODIGO="$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8080/cobrancas \
+            -H 'Content-Type: application/json' \
+            -d "{\"ordemServicoId\":\"$ORDEM\",\"meio\":\"CARTAO\",\"valor\":10.00,\"pagador\":{\"email\":\"a@b.com\",\"primeiroNome\":\"Ana\",\"sobrenome\":\"Silva\",\"tipoDeDocumento\":\"CPF\",\"numeroDoDocumento\":\"12345678901\"}}")"
+          conferir "Cartao sem token responde 422, sem chamar o provedor" 422 "$CODIGO"
+
+          CODIGO="$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+            'http://localhost:8080/webhooks/mercado-pago' \
+            -H 'Content-Type: application/json' \
+            -d '{"type":"payment","action":"payment.updated","data":{"id":"123"}}')"
+          conferir "Webhook sem assinatura responde 401" 401 "$CODIGO"
+
+          CODIGO="$(curl -s -o /dev/null -w '%{http_code}' \
+            http://localhost:8080/actuator/prometheus)"
+          conferir "Endpoint de metricas exposto" 200 "$CODIGO"
+
+          limpar
+
+      - name: Tamanho da imagem
+        if: success()
+        run: |
+          TAMANHO="$(docker image inspect servicetrack-checkout:${{ github.sha }} \
+            --format '{{.Size}}' | awk '{printf "%.0f", $1/1048576}')"
+          echo "| Imagem | ${TAMANHO} MB |" >> "$GITHUB_STEP_SUMMARY"
+
+  sonar:
+    name: "4. Analise no SonarCloud"
+    needs: construir
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ${{ env.DIRETORIO }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: temurin
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Analisar, se o token existir
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "::notice::SONAR_TOKEN ausente: analise ignorada. Crie o projeto no SonarCloud e o secret para ligar."
+            exit 0
+          fi
+          ./gradlew --no-daemon sonar
