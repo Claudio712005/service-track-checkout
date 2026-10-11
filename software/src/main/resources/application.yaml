@@ -66,6 +66,19 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    db:
+      enabled: true
+  tracing:
+    sampling:
+      probability: ${ST_CHK_TRACE_SAMPLING:1.0}
+  otlp:
+    tracing:
+      export:
+        enabled: ${ST_CHK_OTLP_ENABLED:false}
+    metrics:
+      export:
+        enabled: ${ST_CHK_OTLP_ENABLED:false}
 
 logging:
   structured:
