@@ -6,8 +6,6 @@ namespace: service-track-checkout
 resources:
   - ../../base
 
-components:
-  - ../../componentes/nodeport
 
 images:
   - name: servicetrack-checkout
