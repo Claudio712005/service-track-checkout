@@ -191,11 +191,11 @@ apontando para o mesmo pagamento.
 | Ambiente | Banco | Imagem | Exposição |
 |---|---|---|---|
 | `local` (kind) | `componentes/postgres-efemero` | `servicetrack-checkout:local` | NodePort 30084 |
-| `hml` e `prd` | RDS próprio, criado por `infra/terraform` | ECR do ambiente | API Gateway privada → VPC Link → NLB interno → NodePort 30084 |
+| `hml` e `prd` | RDS próprio, criado por `infra/terraform` | ECR do ambiente | só pelo DNS do cluster |
 
-A porta 30084 é contrato com `apis/service-track-api-int/servicos-<ENV>.yaml` no
-`service-track-aws-iac` (`IAC-ADR-033`) e **nada valida o par**: mudar aqui sem mudar lá dá alvo
-`unhealthy` no NLB e `503` na rota, sem erro de apply.
+**Nenhum gateway alcança este serviço** (`IAC-ADR-035`). Quem o chama é o BFF, de dentro do
+cluster, por `http://service-track-checkout.service-track-checkout.svc.cluster.local`. O NodePort
+sobrou só no overlay `local`, onde serve para o kind expor a porta ao host.
 
 ### Dois segredos, separados de propósito
 
