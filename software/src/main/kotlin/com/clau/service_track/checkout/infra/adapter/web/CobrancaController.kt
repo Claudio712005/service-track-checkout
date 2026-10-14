@@ -29,15 +29,15 @@ class CobrancaController(
             cartao = mapper.cartaoDe(requisicao),
         )
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.paraResposta(resultado))
+        return ResponseEntity.status(HttpStatus.CREATED).body(mapper.toResponse(resultado))
     }
 
     override fun porId(id: String): ResponseEntity<CobrancaResponse> =
-        ResponseEntity.ok(mapper.paraResposta(leitura.porId(CobrancaId.de(id))))
+        ResponseEntity.ok(mapper.toResponse(leitura.porId(CobrancaId.de(id))))
 
     override fun porOrdem(ordemServicoId: String): ResponseEntity<List<CobrancaResponse>> =
-        ResponseEntity.ok(leitura.porOrdem(ordemServicoId).map(mapper::paraResposta))
+        ResponseEntity.ok(leitura.porOrdem(ordemServicoId).map(mapper::toResponse))
 
     override fun reconciliar(id: String): ResponseEntity<CobrancaResponse> =
-        ResponseEntity.ok(mapper.paraResposta(escrita.reconciliar(CobrancaId.de(id))))
+        ResponseEntity.ok(mapper.toResponse(escrita.reconciliar(CobrancaId.de(id))))
 }

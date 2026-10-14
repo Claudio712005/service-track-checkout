@@ -35,13 +35,13 @@ class CobrancaMapperWeb {
         )
     }
 
-    fun paraResposta(resultado: ResultadoDaCobranca): CobrancaResponse = paraResposta(resultado.cobranca).copy(
+    fun toResponse(resultado: ResultadoDaCobranca): CobrancaResponse = toResponse(resultado.cobranca).copy(
         qrCode = resultado.provedor?.qrCode,
         qrCodeBase64 = resultado.provedor?.qrCodeBase64,
         linkDoBoleto = resultado.provedor?.linkDoBoleto,
     )
 
-    fun paraResposta(cobranca: Cobranca) = CobrancaResponse(
+    fun toResponse(cobranca: Cobranca) = CobrancaResponse(
         id = cobranca.id.valor,
         ordemServicoId = cobranca.ordemServicoId,
         meio = cobranca.meio.name,

@@ -4,7 +4,7 @@ import com.clau.service_track.checkout.application.exception.RecursoNaoEncontrad
 import com.clau.service_track.checkout.domain.DomainException
 import com.clau.service_track.checkout.infra.adapter.client.mercadopago.MercadoPagoRequestException
 import com.clau.service_track.checkout.infra.adapter.client.mercadopago.MercadoPagoUnavailableException
-import com.clau.service_track.checkout.infra.adapter.web.webhook.AssinaturaInvalidaException
+import com.clau.service_track.checkout.infra.adapter.web.webhook.InvalidSignatureException
 import jakarta.servlet.http.HttpServletRequest
 import java.time.OffsetDateTime
 import org.slf4j.LoggerFactory
@@ -22,86 +22,86 @@ class GlobalExceptionHandler {
     private val log = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)
 
     @ExceptionHandler(RecursoNaoEncontradoException::class)
-    fun naoEncontrado(erro: RecursoNaoEncontradoException, requisicao: HttpServletRequest) =
-        montar(HttpStatus.NOT_FOUND, "RECURSO_NAO_ENCONTRADO", erro.message, requisicao)
+    fun notFound(error: RecursoNaoEncontradoException, request: HttpServletRequest) =
+        build(HttpStatus.NOT_FOUND, "RECURSO_NAO_ENCONTRADO", error.message, request)
 
     @ExceptionHandler(DomainException::class)
-    fun regraDeNegocio(erro: DomainException, requisicao: HttpServletRequest) =
-        montar(HttpStatus.UNPROCESSABLE_ENTITY, "REGRA_DE_NEGOCIO", erro.message, requisicao)
+    fun businessRule(error: DomainException, request: HttpServletRequest) =
+        build(HttpStatus.UNPROCESSABLE_ENTITY, "REGRA_DE_NEGOCIO", error.message, request)
 
     @ExceptionHandler(IllegalArgumentException::class)
-    fun argumentoInvalido(erro: IllegalArgumentException, requisicao: HttpServletRequest) =
-        montar(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", erro.message, requisicao)
+    fun invalidArgument(error: IllegalArgumentException, request: HttpServletRequest) =
+        build(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", error.message, request)
 
     @ExceptionHandler(MethodArgumentNotValidException::class)
-    fun corpoInvalido(erro: MethodArgumentNotValidException, requisicao: HttpServletRequest): ResponseEntity<ErroResponse> {
-        val violacoes = erro.bindingResult.fieldErrors.joinToString("; ") {
+    fun invalidBody(error: MethodArgumentNotValidException, request: HttpServletRequest): ResponseEntity<ErrorResponse> {
+        val violations = error.bindingResult.fieldErrors.joinToString("; ") {
             "${it.field}: ${it.defaultMessage.orEmpty()}"
         }
-        return montar(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", "Corpo invalido: $violacoes", requisicao)
+        return build(HttpStatus.BAD_REQUEST, "REQUISICAO_INVALIDA", "Corpo invalido: $violations", request)
     }
 
     @ExceptionHandler(HttpMessageNotReadableException::class)
-    fun corpoIlegivel(erro: HttpMessageNotReadableException, requisicao: HttpServletRequest) =
-        montar(HttpStatus.BAD_REQUEST, "CORPO_ILEGIVEL", "Corpo nao e um JSON valido", requisicao)
+    fun unreadableBody(error: HttpMessageNotReadableException, request: HttpServletRequest) =
+        build(HttpStatus.BAD_REQUEST, "CORPO_ILEGIVEL", "Corpo nao e um JSON valido", request)
 
-    @ExceptionHandler(AssinaturaInvalidaException::class)
-    fun assinaturaInvalida(erro: AssinaturaInvalidaException, requisicao: HttpServletRequest): ResponseEntity<ErroResponse> {
-        log.warn("notificacao recusada por assinatura motivo={}", erro.message)
-        return montar(HttpStatus.UNAUTHORIZED, "ASSINATURA_INVALIDA", "Assinatura da notificacao invalida", requisicao)
+    @ExceptionHandler(InvalidSignatureException::class)
+    fun invalidSignature(error: InvalidSignatureException, request: HttpServletRequest): ResponseEntity<ErrorResponse> {
+        log.warn("notificacao recusada por assinatura motivo={}", error.message)
+        return build(HttpStatus.UNAUTHORIZED, "ASSINATURA_INVALIDA", "Assinatura da notificacao invalida", request)
     }
 
     @ExceptionHandler(MercadoPagoRequestException::class)
-    fun provedorRecusou(erro: MercadoPagoRequestException, requisicao: HttpServletRequest): ResponseEntity<ErroResponse> {
-        log.warn("provedor recusou a cobranca status={} causa={}", erro.statusCode, erro.message)
-        return montar(
+    fun providerRejected(error: MercadoPagoRequestException, request: HttpServletRequest): ResponseEntity<ErrorResponse> {
+        log.warn("provedor recusou a cobranca status={} causa={}", error.statusCode, error.message)
+        return build(
             HttpStatus.UNPROCESSABLE_ENTITY,
             "PROVEDOR_RECUSOU",
             "O provedor de pagamento recusou a cobranca",
-            requisicao,
+            request,
         )
     }
 
     @ExceptionHandler(MercadoPagoUnavailableException::class)
-    fun provedorIndisponivel(erro: MercadoPagoUnavailableException, requisicao: HttpServletRequest): ResponseEntity<ErroResponse> {
-        log.error("provedor de pagamento indisponivel status={}", erro.statusCode)
-        return montar(
+    fun providerUnavailable(error: MercadoPagoUnavailableException, request: HttpServletRequest): ResponseEntity<ErrorResponse> {
+        log.error("provedor de pagamento indisponivel status={}", error.statusCode)
+        return build(
             HttpStatus.SERVICE_UNAVAILABLE,
             "PROVEDOR_INDISPONIVEL",
             "Provedor de pagamento indisponivel, tente novamente em instantes",
-            requisicao,
+            request,
         )
     }
 
     @ExceptionHandler(ResourceAccessException::class)
-    fun dependenciaInalcancavel(erro: ResourceAccessException, requisicao: HttpServletRequest): ResponseEntity<ErroResponse> {
-        log.error("dependencia inalcancavel rota={} causa={}", requisicao.requestURI, erro.message)
-        return montar(
+    fun dependencyUnreachable(error: ResourceAccessException, request: HttpServletRequest): ResponseEntity<ErrorResponse> {
+        log.error("dependencia inalcancavel rota={} causa={}", request.requestURI, error.message)
+        return build(
             HttpStatus.BAD_GATEWAY,
             "DEPENDENCIA_INDISPONIVEL",
             "Dependencia necessaria para a cobranca esta inalcancavel",
-            requisicao,
+            request,
         )
     }
 
     @ExceptionHandler(Exception::class)
-    fun naoPrevisto(erro: Exception, requisicao: HttpServletRequest): ResponseEntity<ErroResponse> {
-        log.error("falha nao prevista rota={}", requisicao.requestURI, erro)
-        return montar(HttpStatus.INTERNAL_SERVER_ERROR, "ERRO_INTERNO", "Falha nao prevista", requisicao)
+    fun unexpected(error: Exception, request: HttpServletRequest): ResponseEntity<ErrorResponse> {
+        log.error("falha nao prevista rota={}", request.requestURI, error)
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "ERRO_INTERNO", "Falha nao prevista", request)
     }
 
-    private fun montar(
+    private fun build(
         status: HttpStatus,
-        codigo: String,
-        mensagem: String?,
-        requisicao: HttpServletRequest,
-    ): ResponseEntity<ErroResponse> = ResponseEntity.status(status).body(
-        ErroResponse(
+        code: String,
+        message: String?,
+        request: HttpServletRequest,
+    ): ResponseEntity<ErrorResponse> = ResponseEntity.status(status).body(
+        ErrorResponse(
             timestamp = OffsetDateTime.now(),
             status = status.value(),
-            code = codigo,
-            message = mensagem ?: status.reasonPhrase,
-            path = requisicao.requestURI,
+            code = code,
+            message = message ?: status.reasonPhrase,
+            path = request.requestURI,
         )
     )
 }

@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RestController
 @RequestMapping("/webhooks/mercado-pago")
 class WebhookController(
     private val cobrancas: CobrancaCommandHandler,
-    private val assinatura: VerificadorDeAssinatura,
+    private val assinatura: SignatureVerifier,
 ) {
 
     private val log = LoggerFactory.getLogger(WebhookController::class.java)
@@ -46,7 +46,7 @@ class WebhookController(
         val recursoId = corpo?.data?.id ?: idNaQuery
         val tipo = corpo?.type ?: tipoNaQuery
 
-        assinatura.exigirValida(cabecalhoDeAssinatura, idDaRequisicao, recursoId)
+        assinatura.requireValid(cabecalhoDeAssinatura, idDaRequisicao, recursoId)
 
         if (tipo == null || recursoId == null) {
             log.warn("notificacao sem tipo ou sem recurso, ignorada tipo={} recurso={}", tipo, recursoId)
