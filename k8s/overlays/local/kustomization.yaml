@@ -22,6 +22,6 @@ configMapGenerator:
       - ST_CHK_DB_URL=jdbc:postgresql://service-track-checkout-postgres:5432/st_chk
       - ST_CHK_DB_USER=st_chk_user
       - ST_CHK_DB_PASSWORD=st_chk_local
-      - URL_CONSULTAR_ORDEM_SERVICO=http://service-track-ordens.service-track-ordens.svc.cluster.local/ordens
+      - URL_SERVICE_ORDER_GET=http://service-track-ordens.service-track-ordens.svc.cluster.local/ordens
       - MERCADO_PAGO_VERIFY_SIGNATURE=false
       - OTEL_JAVAAGENT_ENABLED=false

@@ -54,7 +54,7 @@ class MercadoPagoPaymentClient(
     }
 
     fun find(paymentId: Long): PaymentResponse =
-        integrationClient.call(ClientsIntegrations.CONSULTAR_PAGAMENTO) { restClient ->
+        integrationClient.call(ClientsIntegrations.PAYMENT_GET) { restClient ->
             restClient.get()
                 .uri("/{paymentId}", paymentId)
                 .headers(authorization())
@@ -64,7 +64,7 @@ class MercadoPagoPaymentClient(
         }
 
     fun cancel(paymentId: Long, idempotencyKey: String): PaymentResponse {
-        val response = integrationClient.call(ClientsIntegrations.CANCELAR_PAGAMENTO) { restClient ->
+        val response = integrationClient.call(ClientsIntegrations.PAYMENT_CANCEL) { restClient ->
             restClient.put()
                 .uri("/{paymentId}", paymentId)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -81,7 +81,7 @@ class MercadoPagoPaymentClient(
     }
 
     fun refund(paymentId: Long, amount: BigDecimal?, idempotencyKey: String): RefundResponse {
-        val response = integrationClient.call(ClientsIntegrations.ESTORNAR_PAGAMENTO) { restClient ->
+        val response = integrationClient.call(ClientsIntegrations.PAYMENT_REFUND) { restClient ->
             restClient.post()
                 .uri("/{paymentId}/refunds", paymentId)
                 .contentType(MediaType.APPLICATION_JSON)

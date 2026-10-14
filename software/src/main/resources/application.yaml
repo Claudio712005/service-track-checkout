@@ -28,34 +28,34 @@ mercado-pago:
 
 clients:
   integrations:
-    ENVIAR_PAGAMENTO_PIX:
-      url: ${URL_ENVIAR_PAGAMENTO_PIX:https://api.mercadopago.com/v1/payments}
-      timeout: ${TIMEOUT_ENVIAR_PAGAMENTO_PIX:15000}
-      retry: ${RETRY_ENVIAR_PAGAMENTO_PIX:2}
-    ENVIAR_PAGAMENTO_BOLETO:
-      url: ${URL_ENVIAR_PAGAMENTO_BOLETO:https://api.mercadopago.com/v1/payments}
-      timeout: ${TIMEOUT_ENVIAR_PAGAMENTO_BOLETO:15000}
-      retry: ${RETRY_ENVIAR_PAGAMENTO_BOLETO:2}
-    ENVIAR_PAGAMENTO_CARTAO:
-      url: ${URL_ENVIAR_PAGAMENTO_CARTAO:https://api.mercadopago.com/v1/payments}
-      timeout: ${TIMEOUT_ENVIAR_PAGAMENTO_CARTAO:20000}
-      retry: ${RETRY_ENVIAR_PAGAMENTO_CARTAO:0}
-    CONSULTAR_PAGAMENTO:
-      url: ${URL_CONSULTAR_PAGAMENTO:https://api.mercadopago.com/v1/payments}
-      timeout: ${TIMEOUT_CONSULTAR_PAGAMENTO:10000}
-      retry: ${RETRY_CONSULTAR_PAGAMENTO:3}
-    CANCELAR_PAGAMENTO:
-      url: ${URL_CANCELAR_PAGAMENTO:https://api.mercadopago.com/v1/payments}
-      timeout: ${TIMEOUT_CANCELAR_PAGAMENTO:15000}
-      retry: ${RETRY_CANCELAR_PAGAMENTO:2}
-    CONSULTAR_ORDEM_SERVICO:
-      url: ${URL_CONSULTAR_ORDEM_SERVICO:http://localhost:8082/ordens}
-      timeout: ${TIMEOUT_CONSULTAR_ORDEM_SERVICO:5000}
-      retry: ${RETRY_CONSULTAR_ORDEM_SERVICO:2}
-    ESTORNAR_PAGAMENTO:
-      url: ${URL_ESTORNAR_PAGAMENTO:https://api.mercadopago.com/v1/payments}
-      timeout: ${TIMEOUT_ESTORNAR_PAGAMENTO:15000}
-      retry: ${RETRY_ESTORNAR_PAGAMENTO:2}
+    PIX_PAYMENT_CREATE:
+      url: ${URL_PIX_PAYMENT_CREATE:https://api.mercadopago.com/v1/payments}
+      timeout: ${TIMEOUT_PIX_PAYMENT_CREATE:15000}
+      retry: ${RETRY_PIX_PAYMENT_CREATE:2}
+    BOLETO_PAYMENT_CREATE:
+      url: ${URL_BOLETO_PAYMENT_CREATE:https://api.mercadopago.com/v1/payments}
+      timeout: ${TIMEOUT_BOLETO_PAYMENT_CREATE:15000}
+      retry: ${RETRY_BOLETO_PAYMENT_CREATE:2}
+    CARD_PAYMENT_CREATE:
+      url: ${URL_CARD_PAYMENT_CREATE:https://api.mercadopago.com/v1/payments}
+      timeout: ${TIMEOUT_CARD_PAYMENT_CREATE:20000}
+      retry: ${RETRY_CARD_PAYMENT_CREATE:0}
+    PAYMENT_GET:
+      url: ${URL_PAYMENT_GET:https://api.mercadopago.com/v1/payments}
+      timeout: ${TIMEOUT_PAYMENT_GET:10000}
+      retry: ${RETRY_PAYMENT_GET:3}
+    PAYMENT_CANCEL:
+      url: ${URL_PAYMENT_CANCEL:https://api.mercadopago.com/v1/payments}
+      timeout: ${TIMEOUT_PAYMENT_CANCEL:15000}
+      retry: ${RETRY_PAYMENT_CANCEL:2}
+    SERVICE_ORDER_GET:
+      url: ${URL_SERVICE_ORDER_GET:http://localhost:8082/ordens}
+      timeout: ${TIMEOUT_SERVICE_ORDER_GET:5000}
+      retry: ${RETRY_SERVICE_ORDER_GET:2}
+    PAYMENT_REFUND:
+      url: ${URL_PAYMENT_REFUND:https://api.mercadopago.com/v1/payments}
+      timeout: ${TIMEOUT_PAYMENT_REFUND:15000}
+      retry: ${RETRY_PAYMENT_REFUND:2}
 
 management:
   endpoints:
