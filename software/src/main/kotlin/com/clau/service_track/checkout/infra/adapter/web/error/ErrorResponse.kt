@@ -3,8 +3,8 @@ package com.clau.service_track.checkout.infra.adapter.web.error
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.OffsetDateTime
 
-@Schema(name = "ErroResponse", description = "Corpo de toda resposta de erro deste servico.")
-data class ErroResponse(
+@Schema(name = "ErrorResponse", description = "Corpo de toda resposta de erro deste servico.")
+data class ErrorResponse(
     val timestamp: OffsetDateTime,
     val status: Int,
 

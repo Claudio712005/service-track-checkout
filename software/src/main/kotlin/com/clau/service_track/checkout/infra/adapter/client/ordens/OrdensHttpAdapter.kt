@@ -18,7 +18,7 @@ class OrdensHttpAdapter(
 
     override fun orcamentoAprovadoDe(ordemServicoId: String): OrcamentoAprovado? {
         val ordem = try {
-            integrationClient.call(ClientsIntegrations.CONSULTAR_ORDEM_SERVICO) { restClient ->
+            integrationClient.call(ClientsIntegrations.SERVICE_ORDER_GET) { restClient ->
                 restClient.get()
                     .uri("/{id}", ordemServicoId)
                     .retrieve()

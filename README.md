@@ -164,11 +164,11 @@ para o handler.
 | `MERCADO_PAGO_NOTIFICATION_URL` | vazio | URL que o provedor chama. **Muda a cada recriação do ambiente** |
 | `MERCADO_PAGO_VERIFY_SIGNATURE` | `true` | desligar só fora de ambiente compartilhado |
 | `MERCADO_PAGO_WEBHOOK_TOLERANCE` | `5m` | janela do `ts` contra replay |
-| `URL_CONSULTAR_ORDEM_SERVICO` | `http://localhost:8082/ordens` | base da consulta de orçamento |
+| `URL_SERVICE_ORDER_GET` | `http://localhost:8082/ordens` | base da consulta de orçamento |
 | `ST_CHK_DB_URL`, `ST_CHK_DB_USER`, `ST_CHK_DB_PASSWORD` | — | banco próprio. Obrigatórios |
 
 Timeout e retentativa de cada integração são configuráveis por `TIMEOUT_*` e `RETRY_*`.
-**`RETRY_ENVIAR_PAGAMENTO_CARTAO` é `0` de propósito:** retentar uma cobrança de cartão é
+**`RETRY_CARD_PAYMENT_CREATE` é `0` de propósito:** retentar uma cobrança de cartão é
 arriscar cobrar duas vezes, e o cabeçalho de idempotência protege contra isso, não contra erro
 de lógica nossa.
 
@@ -224,7 +224,7 @@ Os quatro foram medidos localmente antes de entrarem na esteira.
 
 ### Dependência de saída
 
-`URL_CONSULTAR_ORDEM_SERVICO` aponta para o serviço de ordens pelo DNS do cluster. **Ordens
+`URL_SERVICE_ORDER_GET` aponta para o serviço de ordens pelo DNS do cluster. **Ordens
 inacessível responde 502**, não 500: a falha é da dependência, não deste serviço.
 
 ## Cobertura

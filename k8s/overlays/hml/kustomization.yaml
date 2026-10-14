@@ -23,5 +23,5 @@ configMapGenerator:
     literals:
       - ST_CHK_DB_POOL_MAX=10
       - ST_CHK_DB_POOL_MIN=2
-      - URL_CONSULTAR_ORDEM_SERVICO=http://service-track-ordens.service-track-ordens.svc.cluster.local/ordens
+      - URL_SERVICE_ORDER_GET=http://service-track-ordens.service-track-ordens.svc.cluster.local/ordens
       - OTEL_JAVAAGENT_ENABLED=false

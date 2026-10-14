@@ -15,7 +15,7 @@ class CartaoCheckout(
 
     fun send(input: CartaoCheckoutInput, idempotencyKey: String): PaymentResponse =
         paymentClient.create(
-            integration = ClientsIntegrations.ENVIAR_PAGAMENTO_CARTAO,
+            integration = ClientsIntegrations.CARD_PAYMENT_CREATE,
             request = paymentRequest(input),
             idempotencyKey = idempotencyKey,
         )

@@ -15,7 +15,7 @@ class PixCheckout(
 
     fun send(input: PixCheckoutInput, idempotencyKey: String): PaymentResponse =
         paymentClient.create(
-            integration = ClientsIntegrations.ENVIAR_PAGAMENTO_PIX,
+            integration = ClientsIntegrations.PIX_PAYMENT_CREATE,
             request = paymentRequest(input),
             idempotencyKey = idempotencyKey,
         )

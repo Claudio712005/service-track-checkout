@@ -15,7 +15,7 @@ class BoletoCheckout(
 
     fun send(input: BoletoCheckoutInput, idempotencyKey: String): PaymentResponse =
         paymentClient.create(
-            integration = ClientsIntegrations.ENVIAR_PAGAMENTO_BOLETO,
+            integration = ClientsIntegrations.BOLETO_PAYMENT_CREATE,
             request = paymentRequest(input),
             idempotencyKey = idempotencyKey,
         )
