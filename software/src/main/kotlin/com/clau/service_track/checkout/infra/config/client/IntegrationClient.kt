@@ -1,11 +1,14 @@
 package com.clau.service_track.checkout.infra.config.client
 
+import com.clau.service_track.checkout.infra.adapter.web.filter.CorrelationFilter
 import java.net.http.HttpClient
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
+import org.slf4j.MDC
 import org.springframework.core.retry.RetryException
 import org.springframework.core.retry.RetryPolicy
 import org.springframework.core.retry.RetryTemplate
+import org.springframework.http.HttpHeaders
 import org.springframework.http.client.JdkClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.ResourceAccessException
@@ -48,7 +51,20 @@ class IntegrationClient(
         return restClientBuilder.clone()
             .baseUrl(settings.url)
             .requestFactory(requestFactory)
+            .requestInterceptor { request, body, execution ->
+                forwardCorrelation(request.headers)
+                execution.execute(request, body)
+            }
             .build()
+    }
+
+    private fun forwardCorrelation(headers: HttpHeaders) {
+        MDC.get(CorrelationFilter.CORRELATION_FIELD)
+            ?.takeIf { it.isNotBlank() }
+            ?.let { headers.set(CorrelationFilter.CORRELATION_HEADER, it) }
+        MDC.get(CorrelationFilter.REQUEST_FIELD)
+            ?.takeIf { it.isNotBlank() }
+            ?.let { headers.set(CorrelationFilter.REQUEST_HEADER, it) }
     }
 
     private fun retryTemplate(settings: ClientDto): RetryTemplate =
