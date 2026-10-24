@@ -10,7 +10,7 @@ resources:
 images:
   - name: servicetrack-checkout
     newName: 734564927706.dkr.ecr.us-east-1.amazonaws.com/servicetrack-hml-checkout
-    newTag: placeholder
+    newTag: 4424d00afce35246ac79f03d20df9e79f738af7f
 
 patches:
   - path: hpa-patch.yaml
