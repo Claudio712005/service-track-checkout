@@ -3,7 +3,8 @@ package com.clau.service_track.checkout.infra.adapter.client.mercadopago.dto.res
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class IdentificationResponse(
-    val type: String? = null,
-    val number: String? = null,
+data class MercadoPagoErrorItemResponse(
+    val code: String? = null,
+    val message: String? = null,
+    val details: List<String>? = null,
 )

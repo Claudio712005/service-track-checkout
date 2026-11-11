@@ -47,7 +47,6 @@ abstract class MercadoPagoTestBase {
                 registry.add("clients.integrations.${integration.name}.retry") { 0 }
             }
             registry.add("mercado-pago.access-token") { "access-token-de-teste" }
-            registry.add("mercado-pago.notification-url") { "https://exemplo/webhooks/mercado-pago" }
         }
     }
 }

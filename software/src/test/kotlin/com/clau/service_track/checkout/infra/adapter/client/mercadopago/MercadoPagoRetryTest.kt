@@ -24,7 +24,7 @@ import org.springframework.test.context.DynamicPropertySource
 class MercadoPagoRetryTest {
 
     @Autowired
-    private lateinit var paymentClient: MercadoPagoPaymentClient
+    private lateinit var orderClient: MercadoPagoOrderClient
 
     @BeforeEach
     fun limparStub() {
@@ -35,7 +35,7 @@ class MercadoPagoRetryTest {
     fun `retenta enquanto o mercado pago responde erro de servidor`() {
         repeat(3) { stub.enqueue(500, MercadoPagoPayloads.ERRO_INDISPONIVEL) }
 
-        val excecao = runCatching { paymentClient.find(1234) }.exceptionOrNull()
+        val excecao = runCatching { orderClient.find("ORDTST01PIX0000000000000000001") }.exceptionOrNull()
 
         assertTrue(excecao is MercadoPagoUnavailableException)
         assertEquals(3, stub.requests.size)
@@ -44,11 +44,11 @@ class MercadoPagoRetryTest {
     @Test
     fun `para de retentar quando a tentativa seguinte tem sucesso`() {
         stub.enqueue(500, MercadoPagoPayloads.ERRO_INDISPONIVEL)
-        stub.enqueue(200, MercadoPagoPayloads.PIX_CRIADO)
+        stub.enqueue(200, MercadoPagoPayloads.ORDEM_PIX_CRIADA)
 
-        val resposta = paymentClient.find(1234)
+        val resposta = orderClient.find("ORDTST01PIX0000000000000000001")
 
-        assertEquals(1234L, resposta.id)
+        assertEquals("ORDTST01PIX0000000000000000001", resposta.id)
         assertEquals(2, stub.requests.size)
     }
 
@@ -56,7 +56,7 @@ class MercadoPagoRetryTest {
     fun `nao retenta recusa do mercado pago`() {
         stub.enqueue(400, MercadoPagoPayloads.ERRO_REQUISICAO)
 
-        val excecao = runCatching { paymentClient.find(1234) }.exceptionOrNull()
+        val excecao = runCatching { orderClient.find("ORDTST01PIX0000000000000000001") }.exceptionOrNull()
 
         assertTrue(excecao is MercadoPagoRequestException)
         assertEquals(1, stub.requests.size)

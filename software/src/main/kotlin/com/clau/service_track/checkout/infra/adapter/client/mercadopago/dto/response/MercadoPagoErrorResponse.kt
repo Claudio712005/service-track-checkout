@@ -8,4 +8,5 @@ data class MercadoPagoErrorResponse(
     val error: String? = null,
     val status: Int? = null,
     val cause: List<MercadoPagoErrorCauseResponse>? = null,
+    val errors: List<MercadoPagoErrorItemResponse>? = null,
 )

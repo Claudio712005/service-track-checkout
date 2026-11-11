@@ -6,10 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 @ConfigurationProperties(prefix = "mercado-pago")
 class MercadoPagoProperties(
     val accessToken: String = "",
-    notificationUrl: String? = null,
     val webhookSecret: String = "",
     val webhookToleranceWindow: Duration = Duration.ofMinutes(5),
     val verifyWebhookSignature: Boolean = true,
-) {
-    val notificationUrl: String? = notificationUrl?.takeUnless { it.isBlank() }
-}
+)

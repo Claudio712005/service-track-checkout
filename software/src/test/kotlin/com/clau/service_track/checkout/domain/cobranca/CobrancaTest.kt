@@ -98,15 +98,17 @@ class CobrancaTest {
 
     @Test
     fun `status do provedor e traduzido, e desconhecido estoura em vez de virar pendente`() {
-        assertEquals(SituacaoDaCobranca.APROVADA, SituacaoDaCobranca.doMercadoPago("approved"))
-        assertEquals(SituacaoDaCobranca.APROVADA, SituacaoDaCobranca.doMercadoPago("authorized"))
-        assertEquals(SituacaoDaCobranca.PENDENTE, SituacaoDaCobranca.doMercadoPago("pending"))
-        assertEquals(SituacaoDaCobranca.EM_ANALISE, SituacaoDaCobranca.doMercadoPago("in_process"))
-        assertEquals(SituacaoDaCobranca.EM_ANALISE, SituacaoDaCobranca.doMercadoPago("in_mediation"))
-        assertEquals(SituacaoDaCobranca.RECUSADA, SituacaoDaCobranca.doMercadoPago("rejected"))
-        assertEquals(SituacaoDaCobranca.CANCELADA, SituacaoDaCobranca.doMercadoPago("cancelled"))
+        assertEquals(SituacaoDaCobranca.APROVADA, SituacaoDaCobranca.doMercadoPago("processed"))
+        assertEquals(SituacaoDaCobranca.PENDENTE, SituacaoDaCobranca.doMercadoPago("created"))
+        assertEquals(SituacaoDaCobranca.PENDENTE, SituacaoDaCobranca.doMercadoPago("action_required"))
+        assertEquals(SituacaoDaCobranca.EM_ANALISE, SituacaoDaCobranca.doMercadoPago("processing"))
+        assertEquals(SituacaoDaCobranca.EM_ANALISE, SituacaoDaCobranca.doMercadoPago("in_review"))
+        assertEquals(SituacaoDaCobranca.RECUSADA, SituacaoDaCobranca.doMercadoPago("failed"))
+        assertEquals(SituacaoDaCobranca.CANCELADA, SituacaoDaCobranca.doMercadoPago("canceled"))
+        assertEquals(SituacaoDaCobranca.CANCELADA, SituacaoDaCobranca.doMercadoPago("expired"))
         assertEquals(SituacaoDaCobranca.ESTORNADA, SituacaoDaCobranca.doMercadoPago("refunded"))
         assertEquals(SituacaoDaCobranca.ESTORNADA, SituacaoDaCobranca.doMercadoPago("charged_back"))
+        assertEquals(SituacaoDaCobranca.APROVADA, SituacaoDaCobranca.doMercadoPago("PROCESSED"))
 
         assertFailsWith<IllegalArgumentException> { SituacaoDaCobranca.doMercadoPago("algo_novo") }
         assertFailsWith<IllegalArgumentException> { SituacaoDaCobranca.doMercadoPago(null) }
