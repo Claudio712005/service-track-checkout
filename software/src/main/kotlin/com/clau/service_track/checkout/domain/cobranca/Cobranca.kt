@@ -11,7 +11,7 @@ class Cobranca private constructor(
     val meio: MeioDePagamento,
     val valor: ValorMonetario,
     situacao: SituacaoDaCobranca,
-    pagamentoExternoId: Long?,
+    pagamentoExternoId: String?,
     motivo: String?,
     val dataCriacao: OffsetDateTime,
     dataAtualizacao: OffsetDateTime,
@@ -20,7 +20,7 @@ class Cobranca private constructor(
     var situacao: SituacaoDaCobranca = situacao
         private set
 
-    var pagamentoExternoId: Long? = pagamentoExternoId
+    var pagamentoExternoId: String? = pagamentoExternoId
         private set
 
     var motivo: String? = motivo
@@ -56,7 +56,7 @@ class Cobranca private constructor(
             meio: MeioDePagamento,
             valor: ValorMonetario,
             situacao: SituacaoDaCobranca,
-            pagamentoExternoId: Long?,
+            pagamentoExternoId: String?,
             motivo: String?,
             dataCriacao: OffsetDateTime,
             dataAtualizacao: OffsetDateTime,
@@ -65,7 +65,7 @@ class Cobranca private constructor(
         )
     }
 
-    fun registrarNoProvedor(idExterno: Long, novaSituacao: SituacaoDaCobranca, detalhe: String?) {
+    fun registrarNoProvedor(idExterno: String, novaSituacao: SituacaoDaCobranca, detalhe: String?) {
         if (pagamentoExternoId != null && pagamentoExternoId != idExterno) {
             throw DomainException(
                 "Cobrança ${id.valor} já aponta para o pagamento $pagamentoExternoId no provedor"

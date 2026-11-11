@@ -220,7 +220,7 @@ jobs:
           CODIGO="$(curl -s -o /dev/null -w '%{http_code}' -X POST \
             'http://localhost:8080/webhooks/mercado-pago' \
             -H 'Content-Type: application/json' \
-            -d '{"type":"payment","action":"payment.updated","data":{"id":"123"}}')"
+            -d '{"type":"order","action":"order.updated","data":{"id":"ORD01TESTE"}}')"
           conferir "Webhook sem assinatura responde 401" 401 "$CODIGO"
 
           CODIGO="$(curl -s -o /dev/null -w '%{http_code}' \

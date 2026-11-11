@@ -49,9 +49,9 @@ class CobrancaTest {
     fun `registrar no provedor guarda o identificador e a situacao`() {
         val cobranca = nova()
 
-        cobranca.registrarNoProvedor(1001, SituacaoDaCobranca.APROVADA, "accredited")
+        cobranca.registrarNoProvedor("1001", SituacaoDaCobranca.APROVADA, "accredited")
 
-        assertEquals(1001, cobranca.pagamentoExternoId)
+        assertEquals("1001", cobranca.pagamentoExternoId)
         assertEquals(SituacaoDaCobranca.APROVADA, cobranca.situacao)
         assertEquals("accredited", cobranca.motivo)
     }
@@ -59,17 +59,17 @@ class CobrancaTest {
     @Test
     fun `trocar o identificador do provedor e recusado`() {
         val cobranca = nova()
-        cobranca.registrarNoProvedor(1001, SituacaoDaCobranca.PENDENTE, "pending")
+        cobranca.registrarNoProvedor("1001", SituacaoDaCobranca.PENDENTE, "pending")
 
         assertFailsWith<DomainException> {
-            cobranca.registrarNoProvedor(2002, SituacaoDaCobranca.APROVADA, "accredited")
+            cobranca.registrarNoProvedor("2002", SituacaoDaCobranca.APROVADA, "accredited")
         }
     }
 
     @Test
     fun `mesma situacao chegando de novo nao e mudanca`() {
         val cobranca = nova()
-        cobranca.registrarNoProvedor(1001, SituacaoDaCobranca.PENDENTE, "pending")
+        cobranca.registrarNoProvedor("1001", SituacaoDaCobranca.PENDENTE, "pending")
 
         assertFalse(cobranca.atualizarPeloProvedor(SituacaoDaCobranca.PENDENTE, "pending"))
     }
@@ -77,7 +77,7 @@ class CobrancaTest {
     @Test
     fun `cobranca encerrada so aceita estorno`() {
         val cobranca = nova()
-        cobranca.registrarNoProvedor(1001, SituacaoDaCobranca.APROVADA, "accredited")
+        cobranca.registrarNoProvedor("1001", SituacaoDaCobranca.APROVADA, "accredited")
 
         assertFalse(cobranca.atualizarPeloProvedor(SituacaoDaCobranca.RECUSADA, "atrasada"))
         assertTrue(cobranca.atualizarPeloProvedor(SituacaoDaCobranca.ESTORNADA, "refunded"))
@@ -98,15 +98,17 @@ class CobrancaTest {
 
     @Test
     fun `status do provedor e traduzido, e desconhecido estoura em vez de virar pendente`() {
-        assertEquals(SituacaoDaCobranca.APROVADA, SituacaoDaCobranca.doMercadoPago("approved"))
-        assertEquals(SituacaoDaCobranca.APROVADA, SituacaoDaCobranca.doMercadoPago("authorized"))
-        assertEquals(SituacaoDaCobranca.PENDENTE, SituacaoDaCobranca.doMercadoPago("pending"))
-        assertEquals(SituacaoDaCobranca.EM_ANALISE, SituacaoDaCobranca.doMercadoPago("in_process"))
-        assertEquals(SituacaoDaCobranca.EM_ANALISE, SituacaoDaCobranca.doMercadoPago("in_mediation"))
-        assertEquals(SituacaoDaCobranca.RECUSADA, SituacaoDaCobranca.doMercadoPago("rejected"))
-        assertEquals(SituacaoDaCobranca.CANCELADA, SituacaoDaCobranca.doMercadoPago("cancelled"))
+        assertEquals(SituacaoDaCobranca.APROVADA, SituacaoDaCobranca.doMercadoPago("processed"))
+        assertEquals(SituacaoDaCobranca.PENDENTE, SituacaoDaCobranca.doMercadoPago("created"))
+        assertEquals(SituacaoDaCobranca.PENDENTE, SituacaoDaCobranca.doMercadoPago("action_required"))
+        assertEquals(SituacaoDaCobranca.EM_ANALISE, SituacaoDaCobranca.doMercadoPago("processing"))
+        assertEquals(SituacaoDaCobranca.EM_ANALISE, SituacaoDaCobranca.doMercadoPago("in_review"))
+        assertEquals(SituacaoDaCobranca.RECUSADA, SituacaoDaCobranca.doMercadoPago("failed"))
+        assertEquals(SituacaoDaCobranca.CANCELADA, SituacaoDaCobranca.doMercadoPago("canceled"))
+        assertEquals(SituacaoDaCobranca.CANCELADA, SituacaoDaCobranca.doMercadoPago("expired"))
         assertEquals(SituacaoDaCobranca.ESTORNADA, SituacaoDaCobranca.doMercadoPago("refunded"))
         assertEquals(SituacaoDaCobranca.ESTORNADA, SituacaoDaCobranca.doMercadoPago("charged_back"))
+        assertEquals(SituacaoDaCobranca.APROVADA, SituacaoDaCobranca.doMercadoPago("PROCESSED"))
 
         assertFailsWith<IllegalArgumentException> { SituacaoDaCobranca.doMercadoPago("algo_novo") }
         assertFailsWith<IllegalArgumentException> { SituacaoDaCobranca.doMercadoPago(null) }

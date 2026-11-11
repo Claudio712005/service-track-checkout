@@ -56,6 +56,6 @@ class MercadoPagoStub {
     }
 
     private companion object {
-        const val BASE_PATH = "/v1/payments"
+        const val BASE_PATH = "/v1/orders"
     }
 }

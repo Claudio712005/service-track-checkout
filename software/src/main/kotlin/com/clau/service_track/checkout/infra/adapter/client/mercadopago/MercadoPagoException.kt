@@ -22,4 +22,7 @@ class MercadoPagoUnavailableException(
     RetryableIntegrationFailure
 
 private fun MercadoPagoErrorResponse.causes(): String =
-    cause?.joinToString(";") { "${it.code}:${it.description}" } ?: message ?: error.orEmpty()
+    cause?.joinToString(";") { "${it.code}:${it.description}" }
+        ?: errors?.joinToString(";") { "${it.code}:${it.message}${it.details?.joinToString(",", " [", "]").orEmpty()}" }
+        ?: message
+        ?: error.orEmpty()

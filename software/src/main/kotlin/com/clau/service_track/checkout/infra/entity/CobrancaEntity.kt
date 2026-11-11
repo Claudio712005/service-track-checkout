@@ -29,8 +29,8 @@ class CobrancaEntity(
     @Column(name = "SITUACAO", nullable = false, length = 20)
     var situacao: String,
 
-    @Column(name = "PAGAMENTO_EXTERNO_ID")
-    var pagamentoExternoId: Long? = null,
+    @Column(name = "PAGAMENTO_EXTERNO_ID", length = 64)
+    var pagamentoExternoId: String? = null,
 
     @Column(name = "MOTIVO", length = 500)
     var motivo: String? = null,

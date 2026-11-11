@@ -14,11 +14,11 @@ enum class SituacaoDaCobranca(val encerrada: Boolean) {
             ?: throw IllegalArgumentException("Situacao de cobranca desconhecida: $nome")
 
         fun doMercadoPago(status: String?): SituacaoDaCobranca = when (status?.lowercase()) {
-            "approved", "authorized" -> APROVADA
-            "pending" -> PENDENTE
-            "in_process", "in_mediation" -> EM_ANALISE
-            "rejected" -> RECUSADA
-            "cancelled" -> CANCELADA
+            "processed" -> APROVADA
+            "created", "action_required" -> PENDENTE
+            "processing", "in_review" -> EM_ANALISE
+            "failed" -> RECUSADA
+            "canceled", "expired" -> CANCELADA
             "refunded", "charged_back" -> ESTORNADA
             else -> throw IllegalArgumentException("Status '$status' nao mapeado para situacao de cobranca")
         }

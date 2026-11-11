@@ -29,10 +29,10 @@ class WebhookController(
     private val log = LoggerFactory.getLogger(WebhookController::class.java)
 
     @Operation(
-        summary = "Recebe uma notificação de pagamento",
+        summary = "Recebe uma notificação de ordem",
         description = "Valida a assinatura `x-signature` contra o manifesto `id:<data.id>;request-id:" +
             "<x-request-id>;ts:<ts>;` com HMAC-SHA256, e **sempre responde 200 quando a assinatura confere** " +
-            "— inclusive para notificação repetida ou de pagamento que não conhecemos. O provedor reenvia " +
+            "— inclusive para notificação repetida ou de ordem que não conhecemos. O provedor reenvia " +
             "enquanto não receber 2xx, e reenviar o que já foi tratado só gasta chamada."
     )
     @PostMapping
@@ -53,21 +53,21 @@ class WebhookController(
             return ResponseEntity.status(HttpStatus.OK).build()
         }
 
-        if (tipo != TIPO_DE_PAGAMENTO) {
-            log.info("notificacao de tipo {} ignorada: este servico so trata pagamento", tipo)
+        if (tipo != TIPO_DE_ORDEM) {
+            log.info("notificacao de tipo {} ignorada: este servico so trata ordem", tipo)
             return ResponseEntity.ok().build()
         }
 
         try {
             cobrancas.aplicarNotificacao(tipo, corpo?.action, recursoId)
         } catch (e: RecursoNaoEncontradoException) {
-            log.warn("notificacao de pagamento desconhecido, confirmada sem efeito motivo={}", e.message)
+            log.warn("notificacao de ordem desconhecida, confirmada sem efeito motivo={}", e.message)
         }
 
         return ResponseEntity.ok().build()
     }
 
     private companion object {
-        const val TIPO_DE_PAGAMENTO = "payment"
+        const val TIPO_DE_ORDEM = "order"
     }
 }

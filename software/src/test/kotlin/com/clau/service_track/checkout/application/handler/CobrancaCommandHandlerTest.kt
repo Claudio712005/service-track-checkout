@@ -34,8 +34,8 @@ class CobrancaCommandHandlerTest {
     private val chamadasAoProvedor = AtomicInteger()
     private val chavesDeIdempotencia = mutableListOf<String>()
 
-    private var respostaDaCriacao: RespostaDoProvedor = aprovado(1001)
-    private var respostaDaConsulta: RespostaDoProvedor = aprovado(1001)
+    private var respostaDaCriacao: RespostaDoProvedor = aprovado("1001")
+    private var respostaDaConsulta: RespostaDoProvedor = aprovado("1001")
 
     private val ordem = UUID.randomUUID().toString()
 
@@ -47,7 +47,7 @@ class CobrancaCommandHandlerTest {
         numeroDoDocumento = "52998224725",
     )
 
-    private fun aprovado(id: Long) = RespostaDoProvedor(id, SituacaoDaCobranca.APROVADA, "accredited")
+    private fun aprovado(id: String) = RespostaDoProvedor(id, SituacaoDaCobranca.APROVADA, "accredited")
 
     private val repositorio = object : CobrancaRepositoryPort {
         override fun salvar(cobranca: Cobranca): Cobranca {
@@ -57,7 +57,7 @@ class CobrancaCommandHandlerTest {
 
         override fun porId(id: CobrancaId): Cobranca? = guardadas[id.valor]
 
-        override fun porPagamentoExterno(idExterno: Long): Cobranca? =
+        override fun porPagamentoExterno(idExterno: String): Cobranca? =
             guardadas.values.firstOrNull { it.pagamentoExternoId == idExterno }
 
         override fun porOrdemEMeio(ordemServicoId: String, meio: MeioDePagamento): Cobranca? =
@@ -77,7 +77,7 @@ class CobrancaCommandHandlerTest {
             return respostaDaCriacao
         }
 
-        override fun consultar(idExterno: Long): RespostaDoProvedor {
+        override fun consultar(idExterno: String): RespostaDoProvedor {
             chamadasAoProvedor.incrementAndGet()
             return respostaDaConsulta
         }
@@ -109,8 +109,8 @@ class CobrancaCommandHandlerTest {
         chamadasAoProvedor.set(0)
         chavesDeIdempotencia.clear()
         orcamentoAprovado = OrcamentoAprovado(ordem, "orc-1", ValorMonetario(BigDecimal("267.70")))
-        respostaDaCriacao = aprovado(1001)
-        respostaDaConsulta = aprovado(1001)
+        respostaDaCriacao = aprovado("1001")
+        respostaDaConsulta = aprovado("1001")
     }
 
     private fun solicitar(
@@ -122,7 +122,7 @@ class CobrancaCommandHandlerTest {
     @Test
     fun `pix pendente guarda o identificador do provedor e devolve o QR`() {
         respostaDaCriacao = RespostaDoProvedor(
-            idExterno = 2002,
+            idExterno = "2002",
             situacao = SituacaoDaCobranca.PENDENTE,
             detalhe = "pending_waiting_transfer",
             qrCode = "0002010102...",
@@ -131,7 +131,7 @@ class CobrancaCommandHandlerTest {
         val resultado = solicitar()
 
         assertEquals(SituacaoDaCobranca.PENDENTE, resultado.cobranca.situacao)
-        assertEquals(2002, resultado.cobranca.pagamentoExternoId)
+        assertEquals("2002", resultado.cobranca.pagamentoExternoId)
         assertEquals("0002010102...", resultado.provedor?.qrCode)
     }
 
@@ -160,7 +160,7 @@ class CobrancaCommandHandlerTest {
 
     @Test
     fun `pedir duas vezes a mesma cobranca nao abre outra nem chama o provedor de novo`() {
-        respostaDaCriacao = RespostaDoProvedor(3003, SituacaoDaCobranca.PENDENTE, "pending")
+        respostaDaCriacao = RespostaDoProvedor("3003", SituacaoDaCobranca.PENDENTE, "pending")
 
         val primeira = solicitar()
         val segunda = solicitar()
@@ -172,10 +172,10 @@ class CobrancaCommandHandlerTest {
 
     @Test
     fun `cobranca recusada permite tentar de novo`() {
-        respostaDaCriacao = RespostaDoProvedor(4004, SituacaoDaCobranca.RECUSADA, "cc_rejected_bad_filled_security_code")
+        respostaDaCriacao = RespostaDoProvedor("4004", SituacaoDaCobranca.RECUSADA, "cc_rejected_bad_filled_security_code")
         val primeira = solicitar(meio = MeioDePagamento.CARTAO, cartao = DadosDoCartao("tok", "master", 1))
 
-        respostaDaCriacao = RespostaDoProvedor(4005, SituacaoDaCobranca.APROVADA, "accredited")
+        respostaDaCriacao = RespostaDoProvedor("4005", SituacaoDaCobranca.APROVADA, "accredited")
         val segunda = solicitar(meio = MeioDePagamento.CARTAO, cartao = DadosDoCartao("tok2", "master", 1))
 
         assertEquals(SituacaoDaCobranca.RECUSADA, primeira.cobranca.situacao)
@@ -204,10 +204,10 @@ class CobrancaCommandHandlerTest {
 
     @Test
     fun `notificacao consulta o provedor e aplica a situacao`() {
-        respostaDaCriacao = RespostaDoProvedor(5005, SituacaoDaCobranca.PENDENTE, "pending")
+        respostaDaCriacao = RespostaDoProvedor("5005", SituacaoDaCobranca.PENDENTE, "pending")
         val criada = solicitar()
 
-        respostaDaConsulta = RespostaDoProvedor(5005, SituacaoDaCobranca.APROVADA, "accredited")
+        respostaDaConsulta = RespostaDoProvedor("5005", SituacaoDaCobranca.APROVADA, "accredited")
         assertTrue(handler.aplicarNotificacao("payment", "payment.updated", "5005"))
 
         assertEquals(SituacaoDaCobranca.APROVADA, repositorio.porId(criada.cobranca.id)!!.situacao)
@@ -215,9 +215,9 @@ class CobrancaCommandHandlerTest {
 
     @Test
     fun `notificacao repetida nao reaplica nem consulta o provedor de novo`() {
-        respostaDaCriacao = RespostaDoProvedor(6006, SituacaoDaCobranca.PENDENTE, "pending")
+        respostaDaCriacao = RespostaDoProvedor("6006", SituacaoDaCobranca.PENDENTE, "pending")
         solicitar()
-        respostaDaConsulta = RespostaDoProvedor(6006, SituacaoDaCobranca.APROVADA, "accredited")
+        respostaDaConsulta = RespostaDoProvedor("6006", SituacaoDaCobranca.APROVADA, "accredited")
 
         handler.aplicarNotificacao("payment", "payment.updated", "6006")
         val chamadasDepois = chamadasAoProvedor.get()
@@ -243,7 +243,7 @@ class CobrancaCommandHandlerTest {
     @Test
     fun `estorno aplica mesmo sobre cobranca ja aprovada`() {
         solicitar()
-        respostaDaConsulta = RespostaDoProvedor(1001, SituacaoDaCobranca.ESTORNADA, "refunded")
+        respostaDaConsulta = RespostaDoProvedor("1001", SituacaoDaCobranca.ESTORNADA, "refunded")
 
         assertTrue(handler.aplicarNotificacao("payment", "payment.updated", "1001"))
     }
@@ -251,7 +251,7 @@ class CobrancaCommandHandlerTest {
     @Test
     fun `recusa que chega depois da aprovacao e ignorada`() {
         solicitar()
-        respostaDaConsulta = RespostaDoProvedor(1001, SituacaoDaCobranca.RECUSADA, "atrasada")
+        respostaDaConsulta = RespostaDoProvedor("1001", SituacaoDaCobranca.RECUSADA, "atrasada")
 
         assertFalse(
             handler.aplicarNotificacao("payment", "payment.updated", "1001"),
@@ -261,10 +261,10 @@ class CobrancaCommandHandlerTest {
 
     @Test
     fun `reconciliacao consulta o provedor e corrige o estado`() {
-        respostaDaCriacao = RespostaDoProvedor(7007, SituacaoDaCobranca.PENDENTE, "pending")
+        respostaDaCriacao = RespostaDoProvedor("7007", SituacaoDaCobranca.PENDENTE, "pending")
         val criada = solicitar()
 
-        respostaDaConsulta = RespostaDoProvedor(7007, SituacaoDaCobranca.APROVADA, "accredited")
+        respostaDaConsulta = RespostaDoProvedor("7007", SituacaoDaCobranca.APROVADA, "accredited")
         val reconciliada = handler.reconciliar(criada.cobranca.id)
 
         assertEquals(SituacaoDaCobranca.APROVADA, reconciliada.situacao)

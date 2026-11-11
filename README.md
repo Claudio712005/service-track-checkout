@@ -4,6 +4,10 @@ Microsserviço de **cobrança** da plataforma ServiceTrack. Cobra uma ordem de s
 boleto ou cartão** através do Mercado Pago, e é o único lugar do sistema que conversa com um
 provedor de pagamento.
 
+**A integração usa a API de Orders do Mercado Pago** (`POST /v1/orders`), e não a Payments API
+(`/v1/payments`): com credencial de teste de conta nova, a Payments API recusa toda cobrança.
+Decisão e medição em [`CHK-ADR-001`](docs/adr/CHK-ADR-001-api-de-orders-do-mercado-pago.md).
+
 ---
 
 ## O que este serviço expõe
@@ -40,18 +44,21 @@ nossa infraestrutura.
 
 ## A situação da cobrança é nossa, não do provedor
 
-O provedor tem nove status; nós temos seis situações. A tradução é explícita e **estoura em
-status desconhecido**:
+Cada cobrança é **uma ordem com um pagamento** no provedor. A situação vem do status **da
+ordem**, e o `status_detail` vira o motivo. A tradução é explícita e **estoura em status
+desconhecido**:
 
-| Status do provedor | Situação aqui |
+| Status da ordem | Situação aqui |
 |---|---|
-| `approved`, `authorized` | `APROVADA` |
-| `pending` | `PENDENTE` |
-| `in_process`, `in_mediation` | `EM_ANALISE` |
-| `rejected` | `RECUSADA` |
-| `cancelled` | `CANCELADA` |
+| `processed` | `APROVADA` |
+| `created`, `action_required` | `PENDENTE` |
+| `processing`, `in_review` | `EM_ANALISE` |
+| `failed` | `RECUSADA` |
+| `canceled`, `expired` | `CANCELADA` |
 | `refunded`, `charged_back` | `ESTORNADA` |
 | qualquer outro | **erro** |
+
+`canceled` é com um "l" só, na grafia da API de Orders.
 
 Cair em `PENDENTE` por omissão seria pior: um status novo do provedor deixaria a cobrança
 pendente para sempre, sem ninguém notar. Preferimos o erro ruidoso.
@@ -95,7 +102,9 @@ Quatro detalhes que não se adivinham:
 ### O webhook responde 200 quase sempre, de propósito
 
 Quando a assinatura confere, a resposta é `200` — inclusive para notificação repetida, para tipo
-que não tratamos e para pagamento que não conhecemos. O provedor **reenvia enquanto não receber
+que não tratamos e para ordem que não conhecemos. O tipo tratado é `order`; a URL de
+notificação é configurada no painel da aplicação no Mercado Pago, porque a API de Orders não
+aceita `notification_url` no pedido. O provedor **reenvia enquanto não receber
 2xx**, e reenviar o que já foi tratado só gasta chamada.
 
 Assinatura que não confere responde `401`, e aí o reenvio é desejável: se o segredo estiver
@@ -109,7 +118,7 @@ Duas razões concretas, e a segunda é estrutural aqui:
 
 - o processo pode ter morrido entre criar a cobrança e receber a resposta, deixando a cobrança
   pendente sem identificador externo;
-- **a URL do webhook registrada no provedor morre a cada `destroy` do ambiente.** Este é um
+- **a URL do webhook registrada no painel do provedor morre a cada `destroy` do ambiente.** Este é um
   projeto de ambientes efêmeros; contar só com notificação seria contar com o que não sobrevive.
 
 ---
@@ -118,7 +127,7 @@ Duas razões concretas, e a segunda é estrutural aqui:
 
 | Direção | Mecanismo |
 |---|---|
-| nós → provedor | cabeçalho `X-Idempotency-Key` = `<cobrancaId>:<meio>`, então reenvio da mesma cobrança não cria dois pagamentos |
+| nós → provedor | cabeçalho `X-Idempotency-Key` = `<cobrancaId>:<meio>`, então reenvio da mesma cobrança não cria duas ordens |
 | provedor → nós | tabela `NOTIFICACOES`, com chave `<tipo>:<acao>:<recursoId>` |
 | cliente → nós | pedir a mesma cobrança duas vezes devolve a existente, sem falar com o provedor |
 
@@ -139,7 +148,7 @@ application/
   port/out        repositório, gateway de pagamento, ordens, INBOX
   handler/        CobrancaCommandHandler e CobrancaQueryHandler
 infra/
-  adapter/client  Mercado Pago (Pix, boleto, cartão) e ordens
+  adapter/client  Mercado Pago pela API de Orders (Pix, boleto, cartão) e ordens
   adapter/web     controllers, webhook e contrato de erro
   adapter/repository
   entity/
@@ -161,16 +170,17 @@ para o handler.
 |---|---|---|
 | `MERCADO_PAGO_ACCESS_TOKEN` | vazio | token do provedor. **Sem ele nada é cobrado** |
 | `MERCADO_PAGO_WEBHOOK_SECRET` | vazio | segredo da assinatura. Vazio recusa toda notificação |
-| `MERCADO_PAGO_NOTIFICATION_URL` | vazio | URL que o provedor chama. **Muda a cada recriação do ambiente** |
 | `MERCADO_PAGO_VERIFY_SIGNATURE` | `true` | desligar só fora de ambiente compartilhado |
 | `MERCADO_PAGO_WEBHOOK_TOLERANCE` | `5m` | janela do `ts` contra replay |
 | `URL_SERVICE_ORDER_GET` | `http://localhost:8082/ordens` | base da consulta de orçamento |
 | `ST_CHK_DB_URL`, `ST_CHK_DB_USER`, `ST_CHK_DB_PASSWORD` | — | banco próprio. Obrigatórios |
 
-Timeout e retentativa de cada integração são configuráveis por `TIMEOUT_*` e `RETRY_*`.
-**`RETRY_CARD_PAYMENT_CREATE` é `0` de propósito:** retentar uma cobrança de cartão é
-arriscar cobrar duas vezes, e o cabeçalho de idempotência protege contra isso, não contra erro
-de lógica nossa.
+Timeout e retentativa de cada integração são configuráveis por `TIMEOUT_*` e `RETRY_*`
+(`ORDER_CREATE`, `ORDER_GET`, `SERVICE_ORDER_GET`).
+**`RETRY_ORDER_CREATE` é `0` de propósito:** a mesma integração cria Pix, boleto e cartão, e
+retentar uma cobrança de cartão é arriscar cobrar duas vezes — o cabeçalho de idempotência
+protege contra isso, não contra erro de lógica nossa. Pix e boleto que falhem na criação são
+recuperados pela reconciliação. A consulta (`ORDER_GET`) retenta três vezes.
 
 ## O banco
 
@@ -229,13 +239,13 @@ inacessível responde 502**, não 500: a falha é da dependência, não deste se
 
 ## Cobertura
 
-Portão em linha 80%, instrução 80%, ramo 60%. Medido em 09/10/2026, com 78 testes:
+Portão em linha 80%, instrução 80%, ramo 60%. Medido em 11/11/2026, com 92 testes:
 
 | Métrica | Atual | Mínimo |
 |---|---|---|
-| Linha | 82,0% | 80% |
-| Instrução | 81,0% | 80% |
-| Ramo | 61,8% | 60% |
+| Linha | 88,9% | 80% |
+| Instrução | 84,5% | 80% |
+| Ramo | 72,0% | 60% |
 
 ```bash
 cd software && ./gradlew check
@@ -252,10 +262,12 @@ falsificar uma notificação, não só o caminho felizo.
 - **Integração com a saga.** O passo `COBRANCA` está declarado e vazio no `GLOBAL-ADR-010`, e
   depende da `GLOBAL-RFC-011` fechar. Hoje a cobrança é disparada por HTTP, não por mensagem.
 - **Dockerfile, `k8s/`, `infra/terraform` e as esteiras.**
-- **Nenhuma chamada real ao provedor.** Não há credencial de sandbox configurada: todos os
-  testes usam dublê.
-- **Estorno e cancelamento pela API.** O cliente do provedor já os implementa; falta a rota e a
-  regra de quem pode pedir.
+- **Teste automatizado contra o provedor real.** Os testes usam dublê. A integração foi
+  validada à mão em 11/11/2026, com a conta de teste vendedora: Pix e boleto criados,
+  reconciliação de `PENDENTE` a `CANCELADA`. A collection
+  `docs/postman/mercado-pago.postman_collection.json` repete essas chamadas sem subir o serviço.
+- **Estorno e cancelamento pela API.** Na API de Orders são `POST /v1/orders/{id}/cancel` e
+  `POST /v1/orders/{id}/refund`; falta o cliente, a rota e a regra de quem pode pedir.
 
 ## Fronteiras
 

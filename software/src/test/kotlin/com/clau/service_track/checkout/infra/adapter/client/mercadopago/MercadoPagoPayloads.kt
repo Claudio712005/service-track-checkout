@@ -2,102 +2,119 @@ package com.clau.service_track.checkout.infra.adapter.client.mercadopago
 
 object MercadoPagoPayloads {
 
-    const val PIX_CRIADO = """
+    const val ORDEM_PIX_CRIADA = """
         {
-          "id": 1234,
-          "status": "pending",
-          "status_detail": "pending_waiting_transfer",
-          "payment_method_id": "pix",
-          "payment_type_id": "bank_transfer",
-          "transaction_amount": 350.90,
-          "currency_id": "BRL",
-          "external_reference": "os-0001",
-          "date_created": "2026-10-08T10:00:00.000-03:00",
-          "date_of_expiration": "2026-10-09T10:00:00.000-03:00",
-          "point_of_interaction": {
-            "type": "PIX",
-            "transaction_data": {
-              "qr_code": "00020126580014br.gov.bcb.pix",
-              "qr_code_base64": "iVBORw0KGgoAAAANS",
-              "ticket_url": "https://www.mercadopago.com.br/payments/1234/ticket"
-            }
+          "id": "ORDTST01PIX0000000000000000001",
+          "type": "online",
+          "processing_mode": "automatic",
+          "external_reference": "cobranca-0001",
+          "total_amount": "350.90",
+          "status": "action_required",
+          "status_detail": "waiting_transfer",
+          "transactions": {
+            "payments": [
+              {
+                "id": "PAY01PIX000000000000000001",
+                "amount": "350.90",
+                "status": "action_required",
+                "status_detail": "waiting_transfer",
+                "payment_method": {
+                  "id": "pix",
+                  "type": "bank_transfer",
+                  "ticket_url": "https://www.mercadopago.com.br/sandbox/payments/1/ticket",
+                  "qr_code": "00020126580014br.gov.bcb.pix",
+                  "qr_code_base64": "iVBORw0KGgoAAAANS"
+                }
+              }
+            ]
           }
         }
     """
 
-    const val BOLETO_CRIADO = """
+    const val ORDEM_BOLETO_CRIADA = """
         {
-          "id": 1235,
-          "status": "pending",
-          "status_detail": "pending_waiting_payment",
-          "payment_method_id": "bolbradesco",
-          "payment_type_id": "ticket",
-          "transaction_amount": 120.00,
-          "currency_id": "BRL",
-          "external_reference": "os-0002",
-          "transaction_details": {
-            "external_resource_url": "https://www.mercadopago.com.br/sandbox/payments/1235/boleto",
-            "digitable_line": "23793381286000000000000000000000000000000000",
-            "barcode": { "content": "23793381286000000000000000000000000000000000" }
+          "id": "ORDTST01BOL0000000000000000001",
+          "external_reference": "cobranca-0002",
+          "total_amount": "350.90",
+          "status": "action_required",
+          "status_detail": "waiting_payment",
+          "transactions": {
+            "payments": [
+              {
+                "id": "PAY01BOL000000000000000001",
+                "status": "action_required",
+                "status_detail": "waiting_payment",
+                "payment_method": {
+                  "id": "boleto",
+                  "type": "ticket",
+                  "ticket_url": "https://www.mercadopago.com.br/payments/2/ticket",
+                  "digitable_line": "23793380296060108511566006333307616320000"
+                }
+              }
+            ]
           }
         }
     """
 
-    const val CARTAO_APROVADO = """
+    const val ORDEM_CARTAO_PROCESSADA = """
         {
-          "id": 1236,
-          "status": "approved",
+          "id": "ORDTST01CAR0000000000000000001",
+          "external_reference": "cobranca-0003",
+          "total_amount": "350.90",
+          "status": "processed",
           "status_detail": "accredited",
-          "payment_method_id": "master",
-          "payment_type_id": "credit_card",
-          "installments": 3,
-          "transaction_amount": 900.00,
-          "currency_id": "BRL",
-          "external_reference": "os-0003",
-          "captured": true,
-          "card": {
-            "first_six_digits": "503143",
-            "last_four_digits": "6351",
-            "expiration_month": 11,
-            "expiration_year": 2030,
-            "cardholder": {
-              "name": "APRO",
-              "identification": { "type": "CPF", "number": "12345678909" }
-            }
-          },
-          "fee_details": [
-            { "type": "mercadopago_fee", "fee_payer": "collector", "amount": 44.10 }
-          ]
+          "transactions": {
+            "payments": [
+              {
+                "id": "PAY01CAR000000000000000001",
+                "status": "processed",
+                "status_detail": "accredited",
+                "payment_method": { "id": "master", "type": "credit_card" }
+              }
+            ]
+          }
         }
     """
 
-    const val CANCELADO = """
+    const val ORDEM_CANCELADA = """
         {
-          "id": 1234,
-          "status": "cancelled",
-          "status_detail": "by_collector",
-          "payment_method_id": "pix",
-          "transaction_amount": 350.90
+          "id": "ORDTST01PIX0000000000000000001",
+          "status": "canceled",
+          "status_detail": "canceled",
+          "transactions": {
+            "payments": [ { "id": "PAY01PIX000000000000000001", "status": "canceled", "status_detail": "canceled_transaction" } ]
+          }
         }
     """
 
-    const val ESTORNO = """
+    const val ORDEM_SEM_DETALHE = """
         {
-          "id": 55,
-          "payment_id": 1236,
-          "amount": 900.00,
-          "status": "approved",
-          "refund_mode": "standard",
-          "date_created": "2026-10-08T10:05:00.000-03:00"
+          "id": "ORDTST01PIX0000000000000000002",
+          "status": "failed",
+          "transactions": {
+            "payments": [ { "id": "PAY01PIX000000000000000002", "status": "failed", "status_detail": "rejected_by_issuer" } ]
+          }
         }
     """
 
     const val ERRO_REQUISICAO = """
         {
-          "message": "invalid card_token_id",
-          "error": "bad_request",
-          "status": 400,
-          "cause": [ { "code": "2062", "description": "invalid card_token_id" } ]
+          "errors": [
+            {
+              "code": "unsupported_properties",
+              "message": "Properties not supported",
+              "details": [ "additionalProperties 'notification_url' not allowed" ]
+            }
+          ]
+        }
+    """
+
+    const val ERRO_CREDENCIAL = """
+        {
+          "message": "Unauthorized use of live credentials",
+          "error": "unauthorized",
+          "status": 401,
+          "cause": [ { "code": "7", "description": "Unauthorized use of live credentials" } ]
         }
     """
 

@@ -10,7 +10,7 @@ interface CobrancaRepositoryPort {
 
     fun porId(id: CobrancaId): Cobranca?
 
-    fun porPagamentoExterno(idExterno: Long): Cobranca?
+    fun porPagamentoExterno(idExterno: String): Cobranca?
 
     fun porOrdemEMeio(ordemServicoId: String, meio: MeioDePagamento): Cobranca?
 
