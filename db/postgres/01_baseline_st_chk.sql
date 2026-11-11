@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS COBRANCAS (
     MEIO VARCHAR(20) NOT NULL,
     VALOR NUMERIC(12,2) NOT NULL,
     SITUACAO VARCHAR(20) NOT NULL,
-    PAGAMENTO_EXTERNO_ID BIGINT,
+    PAGAMENTO_EXTERNO_ID VARCHAR(64),
     MOTIVO VARCHAR(500),
     VERSAO INTEGER NOT NULL DEFAULT 0,
     DATA_CRIACAO TIMESTAMPTZ(6) NOT NULL,
@@ -18,11 +18,13 @@ CREATE TABLE IF NOT EXISTS COBRANCAS (
     CONSTRAINT CK_COBRANCAS_VALOR CHECK (VALOR > 0)
 );
 
+ALTER TABLE COBRANCAS ALTER COLUMN PAGAMENTO_EXTERNO_ID TYPE VARCHAR(64) USING PAGAMENTO_EXTERNO_ID::VARCHAR;
+
 COMMENT ON TABLE COBRANCAS IS 'Cobranca de uma ordem de servico. O estado aqui e nosso, nao do provedor: o provedor e consultado e notifica, mas quem decide o que a plataforma entende por aprovado e este servico.';
 COMMENT ON COLUMN COBRANCAS.ORDEM_SERVICO_ID IS 'Referencia opaca ao service-track-ordens. Sem chave estrangeira: banco de outro servico.';
 COMMENT ON COLUMN COBRANCAS.MEIO IS 'PIX, BOLETO ou CARTAO. Pix e boleto sao assincronos e so confirmam por notificacao; cartao responde na propria chamada.';
 COMMENT ON COLUMN COBRANCAS.SITUACAO IS 'PENDENTE, EM_ANALISE, APROVADA, RECUSADA, CANCELADA ou ESTORNADA. Derivada do status do provedor, nao copiada dele.';
-COMMENT ON COLUMN COBRANCAS.PAGAMENTO_EXTERNO_ID IS 'Identificador do pagamento no provedor. Nulo entre a criacao da cobranca e a resposta da chamada: se o processo morrer no meio, a cobranca fica pendente sem id e e reconciliada por consulta.';
+COMMENT ON COLUMN COBRANCAS.PAGAMENTO_EXTERNO_ID IS 'Identificador da ordem no provedor (API de Orders do Mercado Pago, alfanumerico: ORD01... ou ORDTST01... em teste). Nulo entre a criacao da cobranca e a resposta da chamada: se o processo morrer no meio, a cobranca fica pendente sem id e e reconciliada por consulta.';
 COMMENT ON COLUMN COBRANCAS.MOTIVO IS 'status_detail do provedor na recusa. E o que o atendente le para explicar ao cliente.';
 COMMENT ON COLUMN COBRANCAS.VERSAO IS 'Trava otimista. Notificacao do provedor e consulta de reconciliacao podem chegar juntas.';
 COMMENT ON CONSTRAINT UQ_COBRANCAS_ORDEM_ABERTA ON COBRANCAS IS 'Uma cobranca por meio por ordem. Clicar duas vezes em pagar nao abre duas cobrancas; trocar de meio abre outra, e a anterior e cancelada.';

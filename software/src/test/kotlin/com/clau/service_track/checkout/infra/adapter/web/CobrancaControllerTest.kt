@@ -36,7 +36,7 @@ import org.springframework.web.client.ResourceAccessException
 class CobrancaControllerTest {
 
     private val guardadas = ConcurrentHashMap<String, Cobranca>()
-    private var resposta: RespostaDoProvedor = RespostaDoProvedor(1001, SituacaoDaCobranca.PENDENTE, "pending", qrCode = "000201")
+    private var resposta: RespostaDoProvedor = RespostaDoProvedor("1001", SituacaoDaCobranca.PENDENTE, "pending", qrCode = "000201")
     private var falharNoProvedor = false
 
     private val ordem = UUID.randomUUID().toString()
@@ -47,7 +47,7 @@ class CobrancaControllerTest {
             return cobranca
         }
         override fun porId(id: CobrancaId): Cobranca? = guardadas[id.valor]
-        override fun porPagamentoExterno(idExterno: Long): Cobranca? =
+        override fun porPagamentoExterno(idExterno: String): Cobranca? =
             guardadas.values.firstOrNull { it.pagamentoExternoId == idExterno }
         override fun porOrdemEMeio(ordemServicoId: String, meio: MeioDePagamento): Cobranca? =
             guardadas.values.firstOrNull { it.ordemServicoId == ordemServicoId && it.meio == meio }
@@ -60,7 +60,7 @@ class CobrancaControllerTest {
             if (falharNoProvedor) throw MercadoPagoUnavailableException(HttpStatus.BAD_GATEWAY, null)
             return resposta
         }
-        override fun consultar(idExterno: Long): RespostaDoProvedor = resposta
+        override fun consultar(idExterno: String): RespostaDoProvedor = resposta
     }
 
     private val registro = object : RegistroDeNotificacaoPort {
@@ -90,7 +90,7 @@ class CobrancaControllerTest {
         guardadas.clear()
         falharNoProvedor = false
         ordensInalcancavel = false
-        resposta = RespostaDoProvedor(1001, SituacaoDaCobranca.PENDENTE, "pending", qrCode = "000201")
+        resposta = RespostaDoProvedor("1001", SituacaoDaCobranca.PENDENTE, "pending", qrCode = "000201")
 
         val controller = CobrancaController(
             escrita = CobrancaCommandHandler(repositorio, gateway, registro, servicoDeOrdens),
@@ -124,7 +124,7 @@ class CobrancaControllerTest {
             .andExpect(status().isCreated)
             .andExpect(jsonPath("$.situacao").value("PENDENTE"))
             .andExpect(jsonPath("$.qrCode").value("000201"))
-            .andExpect(jsonPath("$.pagamentoExternoId").value(1001))
+            .andExpect(jsonPath("$.pagamentoExternoId").value("1001"))
     }
 
     @Test
@@ -138,7 +138,7 @@ class CobrancaControllerTest {
 
     @Test
     fun `cartao com token responde 201`() {
-        resposta = RespostaDoProvedor(2002, SituacaoDaCobranca.APROVADA, "accredited")
+        resposta = RespostaDoProvedor("2002", SituacaoDaCobranca.APROVADA, "accredited")
         val cartao = ""","cartao":{"token":"tok","bandeira":"master","parcelas":1}"""
 
         mockMvc.perform(
@@ -210,7 +210,7 @@ class CobrancaControllerTest {
             .andExpect(status().isCreated)
 
         val id = guardadas.values.single().id.valor
-        resposta = RespostaDoProvedor(1001, SituacaoDaCobranca.APROVADA, "accredited")
+        resposta = RespostaDoProvedor("1001", SituacaoDaCobranca.APROVADA, "accredited")
 
         mockMvc.perform(post("/cobrancas/$id/reconciliacao"))
             .andExpect(status().isOk)

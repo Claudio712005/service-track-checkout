@@ -32,7 +32,7 @@ class CobrancaRepositoryPostgresAdapter(
         .orElse(null)
 
     @Transactional(readOnly = true)
-    override fun porPagamentoExterno(idExterno: Long): Cobranca? = cobrancas
+    override fun porPagamentoExterno(idExterno: String): Cobranca? = cobrancas
         .findByPagamentoExternoId(idExterno)
         ?.let(mapper::paraDominio)
 

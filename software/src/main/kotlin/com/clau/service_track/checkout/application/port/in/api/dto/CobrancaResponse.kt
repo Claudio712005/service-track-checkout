@@ -15,7 +15,7 @@ data class CobrancaResponse(
     val valor: BigDecimal,
 
     @get:Schema(description = "Identificador do pagamento no provedor.", nullable = true)
-    val pagamentoExternoId: Long?,
+    val pagamentoExternoId: String?,
 
     @get:Schema(description = "Detalhe que o provedor devolveu, sobretudo na recusa.", nullable = true)
     val motivo: String?,

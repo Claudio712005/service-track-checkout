@@ -81,13 +81,10 @@ class CobrancaCommandHandler(
             return false
         }
 
-        val idExterno = recursoId.toLongOrNull()
-            ?: throw RecursoNaoEncontradoException("Notificacao com recurso '$recursoId' que nao e um pagamento")
+        val cobranca = cobrancas.porPagamentoExterno(recursoId)
+            ?: throw RecursoNaoEncontradoException("Nenhuma cobranca aponta para o pagamento $recursoId")
 
-        val cobranca = cobrancas.porPagamentoExterno(idExterno)
-            ?: throw RecursoNaoEncontradoException("Nenhuma cobranca aponta para o pagamento $idExterno")
-
-        val resposta = gateway.consultar(idExterno)
+        val resposta = gateway.consultar(recursoId)
         val mudou = cobranca.atualizarPeloProvedor(resposta.situacao, resposta.detalhe)
 
         if (mudou) {

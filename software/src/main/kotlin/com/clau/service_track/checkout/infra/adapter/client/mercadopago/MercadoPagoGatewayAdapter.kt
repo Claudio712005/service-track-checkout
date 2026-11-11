@@ -75,7 +75,7 @@ class MercadoPagoGatewayAdapter(
         return toResposta(resposta)
     }
 
-    override fun consultar(idExterno: Long): RespostaDoProvedor = toResposta(consulta.find(idExterno))
+    override fun consultar(idExterno: String): RespostaDoProvedor = toResposta(consulta.find(idExterno.toLong()))
 
     private fun chaveDeIdempotencia(cobranca: Cobranca) = "${cobranca.id.valor}:${cobranca.meio.name}"
 
@@ -112,7 +112,7 @@ class MercadoPagoGatewayAdapter(
     }
 
     private fun toResposta(resposta: PaymentResponse) = RespostaDoProvedor(
-        idExterno = resposta.id,
+        idExterno = resposta.id.toString(),
         situacao = SituacaoDaCobranca.doMercadoPago(resposta.status),
         detalhe = resposta.statusDetail,
         qrCode = resposta.pointOfInteraction?.transactionData?.qrCode,

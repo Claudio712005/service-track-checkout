@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface CobrancaJpaRepository : JpaRepository<CobrancaEntity, UUID> {
 
-    fun findByPagamentoExternoId(pagamentoExternoId: Long): CobrancaEntity?
+    fun findByPagamentoExternoId(pagamentoExternoId: String): CobrancaEntity?
 
     fun findByOrdemServicoIdAndMeio(ordemServicoId: UUID, meio: String): CobrancaEntity?
 

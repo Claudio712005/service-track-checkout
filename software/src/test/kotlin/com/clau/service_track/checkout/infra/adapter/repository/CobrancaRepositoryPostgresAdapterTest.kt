@@ -65,11 +65,11 @@ class CobrancaRepositoryPostgresAdapterTest {
         cobrancas.salvar(cobranca)
 
         val recarregada = assertNotNull(cobrancas.porId(cobranca.id))
-        recarregada.registrarNoProvedor(1001, SituacaoDaCobranca.APROVADA, "accredited")
+        recarregada.registrarNoProvedor("1001", SituacaoDaCobranca.APROVADA, "accredited")
         cobrancas.salvar(recarregada)
 
         val lida = assertNotNull(cobrancas.porId(cobranca.id))
-        assertEquals(1001, lida.pagamentoExternoId)
+        assertEquals("1001", lida.pagamentoExternoId)
         assertEquals(SituacaoDaCobranca.APROVADA, lida.situacao)
         assertEquals(1, cobrancas.porOrdem(cobranca.ordemServicoId).size)
     }
@@ -77,11 +77,11 @@ class CobrancaRepositoryPostgresAdapterTest {
     @Test
     fun `busca pelo identificador do provedor, que e o que a notificacao traz`() {
         val cobranca = nova()
-        cobranca.registrarNoProvedor(2002, SituacaoDaCobranca.PENDENTE, "pending")
+        cobranca.registrarNoProvedor("2002", SituacaoDaCobranca.PENDENTE, "pending")
         cobrancas.salvar(cobranca)
 
-        assertEquals(cobranca.id.valor, assertNotNull(cobrancas.porPagamentoExterno(2002)).id.valor)
-        assertNull(cobrancas.porPagamentoExterno(9999))
+        assertEquals(cobranca.id.valor, assertNotNull(cobrancas.porPagamentoExterno("2002")).id.valor)
+        assertNull(cobrancas.porPagamentoExterno("9999"))
     }
 
     @Test
@@ -99,7 +99,7 @@ class CobrancaRepositoryPostgresAdapterTest {
     @Test
     fun `motivo longo do provedor e truncado em vez de estourar a coluna`() {
         val cobranca = nova()
-        cobranca.registrarNoProvedor(3003, SituacaoDaCobranca.RECUSADA, "x".repeat(900))
+        cobranca.registrarNoProvedor("3003", SituacaoDaCobranca.RECUSADA, "x".repeat(900))
 
         cobrancas.salvar(cobranca)
 

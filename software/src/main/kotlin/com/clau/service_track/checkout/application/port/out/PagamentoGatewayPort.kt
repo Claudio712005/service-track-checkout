@@ -7,7 +7,7 @@ interface PagamentoGatewayPort {
 
     fun cobrar(cobranca: Cobranca, pagador: DadosDoPagador, cartao: DadosDoCartao?): RespostaDoProvedor
 
-    fun consultar(idExterno: Long): RespostaDoProvedor
+    fun consultar(idExterno: String): RespostaDoProvedor
 }
 
 data class DadosDoPagador(
@@ -32,7 +32,7 @@ data class DadosDoCartao(
 )
 
 data class RespostaDoProvedor(
-    val idExterno: Long,
+    val idExterno: String,
     val situacao: SituacaoDaCobranca,
     val detalhe: String?,
     val qrCode: String? = null,
