@@ -1,0 +1,504 @@
+{
+  "info": {
+    "name": "Mercado Pago API",
+    "description": "Chamadas diretas a API do Mercado Pago: Orders, Payments e tokenizacao de cartao.\n\nUse com o ambiente `docs/postman/ambientes/mercado-pago-teste.postman_environment.json`. O access token e a public key sao da **aplicacao criada dentro da conta de teste vendedora**, nunca da conta real.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{mercadoPagoAccessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Conta",
+      "item": [
+        {
+          "name": "Dono do token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/users/me",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Confere a quem pertence o access token. Conta de teste responde `nickname` iniciado por `TESTUSER` e `tags` com `test_user`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "pm.test(\"responde 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"token de conta de teste\", () => pm.expect(corpo.tags).to.include(\"test_user\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Meios de pagamento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/v1/payment_methods",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payment_methods"
+              ]
+            },
+            "description": "Lista os meios habilitados para a conta. Em conta de teste nova o `pix` costuma nao aparecer aqui e ainda assim funcionar pela API de Orders."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders API",
+      "description": "`POST /v1/orders`. Em contas novas, a credencial de teste `APP_USR-` do Checkout Transparente so e aceita aqui.",
+      "item": [
+        {
+          "name": "Pix",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/v1/orders",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "v1",
+                "orders"
+              ]
+            },
+            "description": "Cria uma ordem Pix. Responde `action_required / waiting_transfer` com QR code em `transactions.payments[0].payment_method`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"online\",\n  \"processing_mode\": \"automatic\",\n  \"total_amount\": \"{{valor}}\",\n  \"external_reference\": \"{{externalReference}}\",\n  \"payer\": {\n    \"email\": \"{{payerEmail}}\"\n  },\n  \"transactions\": {\n    \"payments\": [\n      {\n        \"amount\": \"{{valor}}\",\n        \"payment_method\": {\n          \"id\": \"pix\",\n          \"type\": \"bank_transfer\"\n        }\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "pm.test(\"cria a ordem\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (corpo.id) { pm.collectionVariables.set(\"orderId\", corpo.id); }",
+                  "console.log(\"status\", corpo.status, corpo.status_detail);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Boleto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/v1/orders",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "v1",
+                "orders"
+              ]
+            },
+            "description": "Cria uma ordem com boleto. Exige nome, CPF e endereco do pagador. Responde `action_required / waiting_payment`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"online\",\n  \"processing_mode\": \"automatic\",\n  \"total_amount\": \"{{valor}}\",\n  \"external_reference\": \"{{externalReference}}\",\n  \"payer\": {\n    \"email\": \"{{payerEmail}}\",\n    \"first_name\": \"{{payerFirstName}}\",\n    \"last_name\": \"{{payerLastName}}\",\n    \"identification\": {\n      \"type\": \"CPF\",\n      \"number\": \"{{payerCpf}}\"\n    },\n    \"address\": {\n      \"zip_code\": \"01310930\",\n      \"street_name\": \"Av Paulista\",\n      \"street_number\": \"1000\",\n      \"neighborhood\": \"Bela Vista\",\n      \"city\": \"Sao Paulo\",\n      \"state\": \"SP\"\n    }\n  },\n  \"transactions\": {\n    \"payments\": [\n      {\n        \"amount\": \"{{valor}}\",\n        \"payment_method\": {\n          \"id\": \"boleto\",\n          \"type\": \"ticket\"\n        }\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "pm.test(\"cria a ordem\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (corpo.id) { pm.collectionVariables.set(\"orderId\", corpo.id); }",
+                  "console.log(\"status\", corpo.status, corpo.status_detail);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cartao",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/v1/orders",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "v1",
+                "orders"
+              ]
+            },
+            "description": "Cria uma ordem com cartao. Rode antes `Cartao de teste / Gerar token do cartao`. O nome do titular `APRO` aprova.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"online\",\n  \"processing_mode\": \"automatic\",\n  \"total_amount\": \"{{valor}}\",\n  \"external_reference\": \"{{externalReference}}\",\n  \"payer\": {\n    \"email\": \"{{payerEmail}}\",\n    \"first_name\": \"APRO\"\n  },\n  \"transactions\": {\n    \"payments\": [\n      {\n        \"amount\": \"{{valor}}\",\n        \"payment_method\": {\n          \"id\": \"{{cardBrand}}\",\n          \"type\": \"credit_card\",\n          \"token\": \"{{cardToken}}\",\n          \"installments\": 1\n        }\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "pm.test(\"cria a ordem\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (corpo.id) { pm.collectionVariables.set(\"orderId\", corpo.id); }",
+                  "console.log(\"status\", corpo.status, corpo.status_detail);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar ordem",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/v1/orders/{{orderId}}",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "v1",
+                "orders",
+                "{{orderId}}"
+              ]
+            },
+            "description": "Consulta a ultima ordem criada."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments API",
+      "description": "`POST /v1/payments`. Em contas novas, a credencial de teste do Checkout Transparente responde `401` com causa `7: Unauthorized use of live credentials`; nesse caso use a Orders API.",
+      "item": [
+        {
+          "name": "Pix",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/v1/payments",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "Cria um pagamento Pix.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_amount\": {{valorNumerico}},\n  \"payment_method_id\": \"pix\",\n  \"description\": \"{{descricao}}\",\n  \"external_reference\": \"{{externalReference}}\",\n  \"payer\": {\n    \"email\": \"{{payerEmail}}\",\n    \"first_name\": \"{{payerFirstName}}\",\n    \"last_name\": \"{{payerLastName}}\",\n    \"identification\": {\n      \"type\": \"CPF\",\n      \"number\": \"{{payerCpf}}\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "pm.test(\"cria o pagamento\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (corpo.id) { pm.collectionVariables.set(\"paymentId\", corpo.id); }",
+                  "console.log(\"status\", corpo.status, corpo.status_detail || corpo.message);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Boleto",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/v1/payments",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "Cria um pagamento com boleto. Exige nome, CPF e endereco do pagador.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_amount\": {{valorNumerico}},\n  \"payment_method_id\": \"bolbradesco\",\n  \"description\": \"{{descricao}}\",\n  \"external_reference\": \"{{externalReference}}\",\n  \"payer\": {\n    \"email\": \"{{payerEmail}}\",\n    \"first_name\": \"{{payerFirstName}}\",\n    \"last_name\": \"{{payerLastName}}\",\n    \"identification\": {\n      \"type\": \"CPF\",\n      \"number\": \"{{payerCpf}}\"\n    },\n    \"address\": {\n      \"zip_code\": \"01310930\",\n      \"street_name\": \"Av Paulista\",\n      \"street_number\": \"1000\",\n      \"neighborhood\": \"Bela Vista\",\n      \"city\": \"Sao Paulo\",\n      \"federal_unit\": \"SP\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "pm.test(\"cria o pagamento\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (corpo.id) { pm.collectionVariables.set(\"paymentId\", corpo.id); }",
+                  "console.log(\"status\", corpo.status, corpo.status_detail || corpo.message);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cartao",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "{{$guid}}"
+              }
+            ],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/v1/payments",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            },
+            "description": "Pagamento com cartao. Rode antes `Cartao de teste / Gerar token do cartao`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transaction_amount\": {{valorNumerico}},\n  \"token\": \"{{cardToken}}\",\n  \"installments\": 1,\n  \"payment_method_id\": \"{{cardBrand}}\",\n  \"description\": \"{{descricao}}\",\n  \"payer\": {\n    \"email\": \"{{payerEmail}}\",\n    \"first_name\": \"{{payerFirstName}}\",\n    \"last_name\": \"{{payerLastName}}\",\n    \"identification\": {\n      \"type\": \"CPF\",\n      \"number\": \"{{payerCpf}}\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "pm.test(\"cria o pagamento\", () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));",
+                  "if (corpo.id) { pm.collectionVariables.set(\"paymentId\", corpo.id); }",
+                  "console.log(\"status\", corpo.status, corpo.status_detail || corpo.message);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar pagamento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/v1/payments/{{paymentId}}",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "v1",
+                "payments",
+                "{{paymentId}}"
+              ]
+            },
+            "description": "Consulta o ultimo pagamento criado."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cartao de teste",
+      "item": [
+        {
+          "name": "Gerar token do cartao",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{mercadoPagoUrl}}/v1/card_tokens?public_key={{mercadoPagoPublicKey}}",
+              "host": [
+                "{{mercadoPagoUrl}}"
+              ],
+              "path": [
+                "v1",
+                "card_tokens"
+              ],
+              "query": [
+                {
+                  "key": "public_key",
+                  "value": "{{mercadoPagoPublicKey}}"
+                }
+              ]
+            },
+            "description": "Tokeniza o cartao de teste com a Public Key, como o SDK do navegador faria. Titular `APRO` aprova, `OTHE` recusa.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"card_number\": \"{{cardNumber}}\",\n  \"expiration_month\": 11,\n  \"expiration_year\": 2030,\n  \"security_code\": \"123\",\n  \"cardholder\": {\n    \"name\": \"{{cardHolder}}\",\n    \"identification\": {\n      \"type\": \"CPF\",\n      \"number\": \"{{payerCpf}}\"\n    }\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const corpo = pm.response.json();",
+                  "pm.test(\"gera o token\", () => pm.expect(corpo.id).to.be.a(\"string\").and.not.empty);",
+                  "pm.collectionVariables.set(\"cardToken\", corpo.id);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "mercadoPagoUrl",
+      "value": "https://api.mercadopago.com",
+      "description": "API do Mercado Pago. Nome proprio para nao colidir com o baseUrl de outras collections."
+    },
+    {
+      "key": "paymentId",
+      "value": "",
+      "description": "Preenchido ao criar um pagamento."
+    },
+    {
+      "key": "orderId",
+      "value": "",
+      "description": "Preenchido ao criar uma ordem."
+    },
+    {
+      "key": "cardToken",
+      "value": "",
+      "description": "Preenchido ao gerar o token do cartao. Vale para um uso so."
+    }
+  ]
+}
