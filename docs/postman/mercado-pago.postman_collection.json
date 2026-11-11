@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "ServiceTrack — Mercado Pago (diagnostico)",
-    "description": "Chamadas diretas a API do Mercado Pago, sem passar pelo checkout. Servem para separar problema de credencial de problema de codigo.\n\nUse com o ambiente `docs/postman/ambientes/mercado-pago-teste.postman_environment.json`. O access token e a public key sao da **aplicacao criada dentro da conta de teste vendedora**, nunca da conta real.",
+    "name": "Mercado Pago API",
+    "description": "Chamadas diretas a API do Mercado Pago: Orders, Payments e tokenizacao de cartao.\n\nUse com o ambiente `docs/postman/ambientes/mercado-pago-teste.postman_environment.json`. O access token e a public key sao da **aplicacao criada dentro da conta de teste vendedora**, nunca da conta real.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -9,7 +9,7 @@
     "bearer": [
       {
         "key": "token",
-        "value": "{{accessToken}}",
+        "value": "{{mercadoPagoAccessToken}}",
         "type": "string"
       }
     ]
@@ -24,9 +24,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/users/me",
+              "raw": "{{mercadoPagoUrl}}/users/me",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "users",
@@ -55,9 +55,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/v1/payment_methods",
+              "raw": "{{mercadoPagoUrl}}/v1/payment_methods",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "v1",
@@ -70,7 +70,7 @@
       ]
     },
     {
-      "name": "Orders API (funciona com credencial de teste)",
+      "name": "Orders API",
       "description": "`POST /v1/orders`. Em contas novas, a credencial de teste `APP_USR-` do Checkout Transparente so e aceita aqui.",
       "item": [
         {
@@ -88,9 +88,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/orders",
+              "raw": "{{mercadoPagoUrl}}/v1/orders",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "v1",
@@ -138,9 +138,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/orders",
+              "raw": "{{mercadoPagoUrl}}/v1/orders",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "v1",
@@ -188,9 +188,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/orders",
+              "raw": "{{mercadoPagoUrl}}/v1/orders",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "v1",
@@ -229,9 +229,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/v1/orders/{{orderId}}",
+              "raw": "{{mercadoPagoUrl}}/v1/orders/{{orderId}}",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "v1",
@@ -239,14 +239,14 @@
                 "{{orderId}}"
               ]
             },
-            "description": "Consulta a ultima ordem criada. E o equivalente da reconciliacao do checkout."
+            "description": "Consulta a ultima ordem criada."
           }
         }
       ]
     },
     {
-      "name": "Payments API (usada hoje pelo checkout)",
-      "description": "`POST /v1/payments`. Com a credencial de teste desta conta, responde `401` com causa `7: Unauthorized use of live credentials`. Mantida para reproduzir o problema e para comparar depois da migracao.",
+      "name": "Payments API",
+      "description": "`POST /v1/payments`. Em contas novas, a credencial de teste do Checkout Transparente responde `401` com causa `7: Unauthorized use of live credentials`; nesse caso use a Orders API.",
       "item": [
         {
           "name": "Pix",
@@ -263,16 +263,16 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/payments",
+              "raw": "{{mercadoPagoUrl}}/v1/payments",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "v1",
                 "payments"
               ]
             },
-            "description": "Mesmo formato que o `checkout` envia hoje para Pix.",
+            "description": "Cria um pagamento Pix.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"transaction_amount\": {{valorNumerico}},\n  \"payment_method_id\": \"pix\",\n  \"description\": \"{{descricao}}\",\n  \"external_reference\": \"{{externalReference}}\",\n  \"payer\": {\n    \"email\": \"{{payerEmail}}\",\n    \"first_name\": \"{{payerFirstName}}\",\n    \"last_name\": \"{{payerLastName}}\",\n    \"identification\": {\n      \"type\": \"CPF\",\n      \"number\": \"{{payerCpf}}\"\n    }\n  }\n}",
@@ -313,16 +313,16 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/payments",
+              "raw": "{{mercadoPagoUrl}}/v1/payments",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "v1",
                 "payments"
               ]
             },
-            "description": "Mesmo formato que o `checkout` envia hoje para boleto.",
+            "description": "Cria um pagamento com boleto. Exige nome, CPF e endereco do pagador.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"transaction_amount\": {{valorNumerico}},\n  \"payment_method_id\": \"bolbradesco\",\n  \"description\": \"{{descricao}}\",\n  \"external_reference\": \"{{externalReference}}\",\n  \"payer\": {\n    \"email\": \"{{payerEmail}}\",\n    \"first_name\": \"{{payerFirstName}}\",\n    \"last_name\": \"{{payerLastName}}\",\n    \"identification\": {\n      \"type\": \"CPF\",\n      \"number\": \"{{payerCpf}}\"\n    },\n    \"address\": {\n      \"zip_code\": \"01310930\",\n      \"street_name\": \"Av Paulista\",\n      \"street_number\": \"1000\",\n      \"neighborhood\": \"Bela Vista\",\n      \"city\": \"Sao Paulo\",\n      \"federal_unit\": \"SP\"\n    }\n  }\n}",
@@ -363,9 +363,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/payments",
+              "raw": "{{mercadoPagoUrl}}/v1/payments",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "v1",
@@ -404,9 +404,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/v1/payments/{{paymentId}}",
+              "raw": "{{mercadoPagoUrl}}/v1/payments/{{paymentId}}",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "v1",
@@ -433,9 +433,9 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/v1/card_tokens?public_key={{publicKey}}",
+              "raw": "{{mercadoPagoUrl}}/v1/card_tokens?public_key={{mercadoPagoPublicKey}}",
               "host": [
-                "{{baseUrl}}"
+                "{{mercadoPagoUrl}}"
               ],
               "path": [
                 "v1",
@@ -444,11 +444,11 @@
               "query": [
                 {
                   "key": "public_key",
-                  "value": "{{publicKey}}"
+                  "value": "{{mercadoPagoPublicKey}}"
                 }
               ]
             },
-            "description": "Tokeniza o cartao de teste com a Public Key, como o SDK do navegador faria. O numero do cartao nunca passa pelo checkout. Titular `APRO` aprova, `OTHE` recusa.",
+            "description": "Tokeniza o cartao de teste com a Public Key, como o SDK do navegador faria. Titular `APRO` aprova, `OTHE` recusa.",
             "body": {
               "mode": "raw",
               "raw": "{\n  \"card_number\": \"{{cardNumber}}\",\n  \"expiration_month\": 11,\n  \"expiration_year\": 2030,\n  \"security_code\": \"123\",\n  \"cardholder\": {\n    \"name\": \"{{cardHolder}}\",\n    \"identification\": {\n      \"type\": \"CPF\",\n      \"number\": \"{{payerCpf}}\"\n    }\n  }\n}",
@@ -480,6 +480,11 @@
     }
   ],
   "variable": [
+    {
+      "key": "mercadoPagoUrl",
+      "value": "https://api.mercadopago.com",
+      "description": "API do Mercado Pago. Nome proprio para nao colidir com o baseUrl de outras collections."
+    },
     {
       "key": "paymentId",
       "value": "",
