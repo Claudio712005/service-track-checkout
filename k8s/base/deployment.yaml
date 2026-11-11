@@ -31,6 +31,9 @@ spec:
             - secretRef:
                 name: service-track-checkout-mercado-pago
                 optional: true
+            - secretRef:
+                name: service-track-observabilidade
+                optional: true
           startupProbe:
             httpGet:
               path: /actuator/health/readiness
